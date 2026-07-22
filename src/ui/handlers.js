@@ -4,6 +4,7 @@ import { saveClientTemplate } from "../config/load-config.js";
 import { PreviewQueue, renderDraftPreview } from "./preview-service.js";
 import { loadFeed } from "./feed-cache.js";
 import { getRenderJob, startRenderJob } from "./run-store.js";
+import { loadR2Usage } from "../storage/r2-usage.js";
 
 const previewQueue = new PreviewQueue();
 
@@ -105,6 +106,11 @@ export async function startRenderHandler(request) {
 
 export async function renderStatusHandler(request) {
   return json({ job: getRenderJob(request.params.id) });
+}
+
+export async function r2UsageHandler(request) {
+  const force = request.url.searchParams.get("refresh") === "1";
+  return json({ usage: await loadR2Usage({ force }) });
 }
 
 export function errorResponse(error) {

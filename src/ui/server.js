@@ -7,6 +7,7 @@ import {
   listClientsHandler,
   previewHandler,
   productsHandler,
+  r2UsageHandler,
   renderStatusHandler,
   runsHandler,
   saveTemplateHandler,
@@ -74,6 +75,11 @@ async function route(request, response) {
 
   if (request.method === "GET" && url.pathname === "/api/clients") {
     send(response, await listClientsHandler({ url }));
+    return;
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/r2/usage") {
+    send(response, await r2UsageHandler({ url }));
     return;
   }
 

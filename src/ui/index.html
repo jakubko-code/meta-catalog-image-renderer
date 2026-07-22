@@ -95,6 +95,14 @@
     .progress-track { height:7px; overflow:hidden; border-radius:999px; background:var(--panel-3); margin:12px 0 9px }
     .progress-bar { width:0; height:100%; background:var(--accent); transition:width .2s ease }
     .progress-meta { display:flex; flex-wrap:wrap; justify-content:space-between; gap:8px; color:var(--dim); font-size:12px }
+    .usage-grid { display:grid; grid-template-columns:repeat(3,minmax(160px,1fr)); gap:18px }
+    .usage-value { margin-top:5px; font:18px var(--mono); font-variant-numeric:tabular-nums }
+    .usage-limit { color:var(--faint); font-size:11px }
+    .usage-track { height:5px; overflow:hidden; border-radius:999px; background:var(--panel-3); margin-top:9px }
+    .usage-bar { min-width:2px; height:100%; background:var(--accent) }
+    .usage-bar.warn { background:#d9a441 }
+    .usage-bar.danger { background:var(--err) }
+    .usage-foot { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-top:15px; padding-top:13px; border-top:1px solid var(--line-soft); color:var(--faint); font-size:11.5px }
     .save-note { margin-top:10px; color:var(--dim); font-size:12px }
     .products-toolbar { display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; margin-bottom:18px }
     .chips { display:flex; gap:7px; flex-wrap:wrap }
@@ -135,6 +143,7 @@
       .table-wrap { overflow:auto }
       .editor { grid-template-columns:1fr }
       .preview-dock { position:static }
+      .usage-grid { grid-template-columns:1fr }
     }
     @media(min-width:761px) and (max-width:1100px) { .editor { grid-template-columns:1fr } .preview-dock { position:static; max-width:500px } }
     @media(prefers-reduced-motion:reduce) { .spinner { animation:none } }
@@ -180,6 +189,36 @@
             <div class="stat"><span class="micro">Vyrenderované</span><div class="n" id="rendered-count">—</div></div>
             <div class="stat"><span class="micro">Neplatné položky</span><div class="n" id="invalid-count">—</div></div>
             <div class="stat"><span class="micro">Verzia šablóny</span><div class="n muted" id="template-version">—</div></div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <h2>Cloudflare R2 — free tier</h2>
+              <div style="display:flex;align-items:center;gap:9px"><span class="tag" id="r2-status">Načítavam</span><button class="btn" id="refresh-r2">Obnoviť</button></div>
+            </div>
+            <div class="card-body">
+              <div class="usage-grid">
+                <div>
+                  <span class="micro">Aktuálne úložisko</span>
+                  <div class="usage-value" id="r2-storage-value">—</div>
+                  <div class="usage-limit" id="r2-storage-limit">z 10 GB</div>
+                  <div class="usage-track"><div class="usage-bar" id="r2-storage-bar"></div></div>
+                </div>
+                <div>
+                  <span class="micro">Class A tento mesiac</span>
+                  <div class="usage-value" id="r2-class-a-value">—</div>
+                  <div class="usage-limit">z 1 000 000 operácií</div>
+                  <div class="usage-track"><div class="usage-bar" id="r2-class-a-bar"></div></div>
+                </div>
+                <div>
+                  <span class="micro">Class B tento mesiac</span>
+                  <div class="usage-value" id="r2-class-b-value">—</div>
+                  <div class="usage-limit">z 10 000 000 operácií</div>
+                  <div class="usage-track"><div class="usage-bar" id="r2-class-b-bar"></div></div>
+                </div>
+              </div>
+              <div class="usage-foot"><span id="r2-detail">Načítavam Cloudflare metriky…</span><span id="r2-updated">—</span></div>
+            </div>
           </div>
 
           <div class="card" id="render-status-card" hidden>
@@ -347,6 +386,15 @@
         if (amount == null) return '—';
         return new Intl.NumberFormat('sk-SK', { style:'currency', currency:currency || 'EUR' }).format(amount);
       }
+      function bytes(value) {
+        if (value == null) return '—';
+        if (value < 1000 * 1000) return (value / 1000).toFixed(1).replace('.', ',') + ' kB';
+        if (value < 1000 * 1000 * 1000) return (value / 1000 / 1000).toFixed(1).replace('.', ',') + ' MB';
+        return (value / 1000 / 1000 / 1000).toFixed(2).replace('.', ',') + ' GB';
+      }
+      function percentage(value, limit) { return limit ? value / limit * 100 : 0; }
+      function percentLabel(value) { return value > 0 && value < 0.1 ? '< 0,1 %' : value.toFixed(1).replace('.', ',') + ' %'; }
+      function usageClass(value) { return value >= 85 ? 'danger' : value >= 70 ? 'warn' : ''; }
       function showError(error) {
         el('error').classList.remove('ok');
         el('error').textContent = error.message;
@@ -402,6 +450,47 @@
         el('meta-feed-url').textContent = feedUrl;
         el('meta-feed-detail').innerHTML = 'Obsahuje <span class="mono">' + count(client.state.renderedCount) + '</span> riadkov · posledná lokálna aktualizácia <span class="mono">' + escapeHtml(when(client.state.updatedAt)) + '</span> · stĺpce <span class="mono">id, image_link</span>';
         drawRuns(client.runs || []);
+      }
+
+      function setUsageBar(id, percent) {
+        var bar = el(id);
+        bar.style.width = Math.min(100, percent) + '%';
+        bar.className = 'usage-bar ' + usageClass(percent);
+      }
+
+      function drawR2Usage(usage) {
+        var storagePercent = percentage(usage.standardStorage.usedBytes, usage.limits.standardStorageBytes);
+        var classAPercent = percentage(usage.operations.classA, usage.limits.classAOperations);
+        var classBPercent = percentage(usage.operations.classB, usage.limits.classBOperations);
+        var maximum = Math.max(storagePercent, classAPercent, classBPercent);
+        el('r2-storage-value').textContent = bytes(usage.standardStorage.usedBytes) + ' · ' + percentLabel(storagePercent);
+        el('r2-class-a-value').textContent = count(usage.operations.classA) + ' · ' + percentLabel(classAPercent);
+        el('r2-class-b-value').textContent = count(usage.operations.classB) + ' · ' + percentLabel(classBPercent);
+        setUsageBar('r2-storage-bar', storagePercent);
+        setUsageBar('r2-class-a-bar', classAPercent);
+        setUsageBar('r2-class-b-bar', classBPercent);
+        var status = maximum >= 100 ? 'Limit prekročený' : maximum >= 85 ? 'Blízko limitu' : maximum >= 70 ? 'Pozor' : 'V norme';
+        el('r2-status').textContent = status;
+        el('r2-status').className = 'tag' + (maximum >= 70 ? ' err' : '');
+        var detail = count(usage.standardStorage.objectCount) + ' objektov';
+        if (usage.infrequentAccessStorage.usedBytes > 0) detail += ' · Infrequent Access ' + bytes(usage.infrequentAccessStorage.usedBytes) + ' nie je vo free tieri';
+        if (usage.operations.unknown > 0) detail += ' · ' + count(usage.operations.unknown) + ' nezaradených operácií';
+        el('r2-detail').textContent = detail + ' · úložisko je aktuálny stav, billing používa GB-month';
+        el('r2-updated').textContent = 'Aktualizované ' + when(usage.fetchedAt);
+      }
+
+      async function loadR2Usage(refresh) {
+        var button = el('refresh-r2');
+        button.disabled = true;
+        el('r2-status').textContent = 'Načítavam';
+        try {
+          var result = await api('/api/r2/usage' + (refresh ? '?refresh=1' : ''));
+          drawR2Usage(result.usage);
+        } catch (error) {
+          el('r2-status').textContent = 'Nedostupné';
+          el('r2-status').className = 'tag err';
+          el('r2-detail').textContent = error.message;
+        } finally { button.disabled = false; }
       }
 
       function renderField(field) {
@@ -697,6 +786,7 @@
       }
 
       async function start() {
+        loadR2Usage(false);
         try {
           var data = await api('/api/clients');
           clients = data.clients;
@@ -711,6 +801,7 @@
       el('refresh').addEventListener('click', function () {
         if (selectedId) selectClient(selectedId, true);
       });
+      el('refresh-r2').addEventListener('click', function () { loadR2Usage(true); });
       el('sample-product').addEventListener('change', function () {
         selectedProduct = products.find(function (product) { return product.id === el('sample-product').value; });
         renderedPreviewUrl = renderedPreviewUrl && (URL.revokeObjectURL(renderedPreviewUrl), null);

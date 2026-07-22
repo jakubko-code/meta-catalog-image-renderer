@@ -42,3 +42,14 @@ Ak bucket používa EU jurisdiction, pridaj repository variable
 Prvý test spusti cez **Actions → Publish Meta catalogs → Run workflow**. Pole
 client nechaj prázdne, aby sa spracovali všetci klienti, a `force` nechaj vypnuté.
 Výsledné počty sa zobrazia v job summary.
+
+## R2 využitie v lokálnom UI
+
+Prehľad zobrazuje aktuálne Standard storage a mesačné Class A/Class B operácie
+voči free-tier limitom. Metriky sa cachujú 5 minút a dajú sa obnoviť ručne.
+
+Do lokálneho `.env` pridaj `CLOUDFLARE_API_TOKEN` s read-only oprávneniami
+`Account Analytics Read` a `Workers R2 Storage Read`. Tento token nie je potrebný
+pre renderovanie ani GitHub Actions; slúži iba na zobrazenie Cloudflare metrík.
+Úložisko v UI je aktuálny snapshot, zatiaľ čo Cloudflare fakturuje priemerné
+GB-month.
