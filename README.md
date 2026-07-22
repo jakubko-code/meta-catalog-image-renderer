@@ -25,8 +25,8 @@ vyhľadávanie podľa SKU alebo názvu a filtre pre zľavy, dnešné zmeny a chy
 
 ## Automatické publikovanie cez GitHub Actions
 
-Workflow `.github/workflows/publish-catalogs.yml` sa spúšťa každé 4 hodiny o
-17. minúte v časovom pásme Europe/Bratislava. Všetkých klientov z `clients/`
+Workflow `.github/workflows/publish-catalogs.yml` sa spúšťa raz denne o 03:17
+v časovom pásme Europe/Bratislava. Všetkých klientov z `clients/`
 spracuje postupne v jednom jobe. Nezmenené SKU sa podľa R2 stavu preskočia.
 
 V súkromnom GitHub repozitári pridaj cez **Settings → Secrets and variables →
