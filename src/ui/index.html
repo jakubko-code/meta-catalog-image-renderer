@@ -1,0 +1,808 @@
+<!doctype html>
+<html lang="sk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Feed Renderer</title>
+  <style>
+    :root {
+      --bg:#131417; --panel:#1a1c21; --panel-2:#212429; --panel-3:#282c33;
+      --line:#2e323a; --line-soft:#23262c; --fg:#e9ebef; --dim:#99a0ab;
+      --faint:#6a707b; --accent:#58a6a0; --accent-dim:#2f4f4d; --err:#d9645f;
+      --sans:ui-sans-serif,-apple-system,"Segoe UI",Inter,Roboto,sans-serif;
+      --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+    }
+    * { box-sizing:border-box }
+    body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.5 var(--sans); -webkit-font-smoothing:antialiased }
+    button { font:inherit; color:inherit }
+    button:focus-visible { outline:2px solid var(--accent); outline-offset:2px }
+    .mono { font-family:var(--mono); font-variant-numeric:tabular-nums }
+    .micro { font:10px var(--mono); letter-spacing:.12em; text-transform:uppercase; color:var(--faint) }
+    .shell { display:grid; grid-template-columns:232px 1fr; min-height:100vh }
+    .rail { background:var(--panel); border-right:1px solid var(--line); padding:20px 12px; display:flex; flex-direction:column; gap:27px }
+    .wordmark { padding:0 8px; font-weight:650; font-size:15px; display:flex; align-items:center; gap:9px }
+    .dot { width:9px; height:9px; border-radius:2px; background:var(--accent) }
+    .rail-label { display:block; padding:0 8px 8px }
+    .client { width:100%; text-align:left; border:0; border-radius:7px; background:none; padding:9px 10px; cursor:pointer; display:flex; flex-direction:column; gap:3px }
+    .client:hover { background:var(--panel-2) }
+    .client[aria-current=true] { background:var(--panel-3) }
+    .client-name { display:flex; align-items:center; gap:8px; font-weight:550 }
+    .client-meta { color:var(--faint); font:11px var(--mono) }
+    .pip { width:6px; height:6px; border-radius:50%; background:var(--accent) }
+    .pip.bad { background:var(--err) }
+    .rail-note { margin-top:auto; padding:0 8px; color:var(--faint); font-size:11px }
+    .main { min-width:0 }
+    .topbar { border-bottom:1px solid var(--line); padding:18px 26px 0; background:var(--panel) }
+    .topbar-row { display:flex; align-items:flex-end; justify-content:space-between; gap:20px; flex-wrap:wrap }
+    h1 { margin:0 0 3px; font-size:21px; font-weight:620; letter-spacing:-.02em }
+    .sub { color:var(--dim); font-size:12.5px; min-height:19px }
+    .btn { border:1px solid var(--line); border-radius:7px; background:var(--panel-3); padding:8px 14px; cursor:pointer; font-size:13px; font-weight:550 }
+    .btn:hover:not(:disabled) { border-color:#3c424c; background:#2f343c }
+    .btn:disabled { cursor:not-allowed; opacity:.42 }
+    .btn.primary { background:var(--accent); border-color:var(--accent); color:#0e1918; font-weight:620 }
+    .tabs { display:flex; gap:2px; margin-top:16px }
+    .tab { border:0; border-bottom:2px solid transparent; background:none; padding:9px 13px; cursor:pointer; color:var(--dim); font-size:13px; font-weight:550 }
+    .tab[aria-selected=true] { color:var(--fg); border-bottom-color:var(--accent) }
+    .content { padding:24px 26px 60px }
+    .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:1px; background:var(--line); border:1px solid var(--line); border-radius:9px; overflow:hidden; margin-bottom:26px }
+    .stat { background:var(--panel); padding:15px 16px }
+    .stat .n { margin-top:5px; font:25px var(--mono); letter-spacing:-.02em }
+    .stat .n.muted { color:var(--faint) }
+    .card { background:var(--panel); border:1px solid var(--line); border-radius:9px; overflow:hidden; margin-bottom:22px }
+    .card-head { padding:13px 16px; border-bottom:1px solid var(--line-soft); display:flex; justify-content:space-between; align-items:center; gap:12px }
+    .card-head h2 { margin:0; font-size:13.5px; font-weight:600 }
+    .card-body { padding:16px }
+    table { width:100%; border-collapse:collapse; font-size:13px }
+    th { text-align:left; color:var(--faint); font:10px var(--mono); letter-spacing:.12em; text-transform:uppercase; padding:10px 16px; border-bottom:1px solid var(--line-soft) }
+    td { padding:11px 16px; border-bottom:1px solid var(--line-soft) }
+    tbody tr:last-child td { border-bottom:0 }
+    .num { text-align:right }
+    .tag { font:10.5px var(--mono); letter-spacing:.06em; padding:3px 7px; border:1px solid var(--accent-dim); border-radius:4px; color:var(--accent); background:#1a2626 }
+    .tag.err { color:var(--err); border-color:#4a2b2a; background:#241a1a }
+    .empty { padding:34px 16px; text-align:center; color:var(--faint) }
+    .notice { display:none; border:1px solid #4a2b2a; background:#241a1a; color:#efaaa7; border-radius:7px; padding:10px 12px; margin-bottom:18px }
+    .notice.ok { border-color:var(--accent-dim); background:#1a2626; color:#8fd0cb }
+    .placeholder { padding:42px; text-align:center; color:var(--faint) }
+    .editor { display:grid; grid-template-columns:minmax(0,1fr) 400px; gap:22px; align-items:start }
+    .field-group { border-top:1px solid var(--line-soft); padding-top:14px; margin-top:14px }
+    .field-group:first-child { border-top:0; padding-top:0; margin-top:0 }
+    .group-title { display:block; margin-bottom:12px }
+    .field { margin-bottom:15px }
+    .field:last-child { margin-bottom:0 }
+    .field > label,.field-label { display:block; margin-bottom:6px; color:var(--dim); font-size:12.5px }
+    input[type=text],input[type=number],select { width:100%; border:1px solid var(--line); border-radius:6px; background:var(--bg); padding:8px 10px; color:var(--fg); font:13px var(--sans) }
+    input[type=color] { width:38px; height:32px; padding:0; border:1px solid var(--line); border-radius:6px; background:none; cursor:pointer }
+    input[type=range] { flex:1; accent-color:var(--accent) }
+    input[type=checkbox] { width:15px; height:15px; accent-color:var(--accent) }
+    .check { display:flex!important; align-items:center; gap:9px; cursor:pointer; color:var(--fg)!important }
+    .range-row,.color-row { display:flex; align-items:center; gap:12px }
+    .range-value,.color-value { min-width:68px; text-align:right; color:var(--dim); font:12px var(--mono) }
+    .preview-dock { position:sticky; top:18px }
+    .plinth { background:var(--panel); border:1px solid var(--line); border-radius:9px; padding:16px }
+    .plinth-head,.plinth-foot { display:flex; justify-content:space-between; align-items:center; gap:10px }
+    .plinth-head { margin-bottom:13px }
+    .plinth-foot { margin-top:12px; padding-top:12px; border-top:1px solid var(--line-soft) }
+    .toggle { display:flex; border:1px solid var(--line); border-radius:6px; overflow:hidden }
+    .toggle button { border:0; background:none; padding:4px 11px; cursor:pointer; color:var(--faint); font:10px var(--mono); letter-spacing:.1em; text-transform:uppercase }
+    .toggle button[aria-pressed=true] { background:var(--panel-3); color:var(--fg) }
+    .preview-stage { position:relative; aspect-ratio:1; overflow:hidden; background:#fff; border-radius:5px }
+    .preview-stage img { display:block; width:100%; height:100%; object-fit:contain }
+    .preview-loading { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(19,20,23,.72); color:var(--fg); font-size:12px }
+    .preview-actions { display:flex; gap:9px; margin-top:12px }
+    .preview-actions .btn { flex:1 }
+    .preview-error { min-height:18px; margin-top:9px; color:var(--err); font-size:12px }
+    .sample-card { margin-bottom:16px }
+    .progress-track { height:7px; overflow:hidden; border-radius:999px; background:var(--panel-3); margin:12px 0 9px }
+    .progress-bar { width:0; height:100%; background:var(--accent); transition:width .2s ease }
+    .progress-meta { display:flex; flex-wrap:wrap; justify-content:space-between; gap:8px; color:var(--dim); font-size:12px }
+    .save-note { margin-top:10px; color:var(--dim); font-size:12px }
+    .products-toolbar { display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; margin-bottom:18px }
+    .chips { display:flex; gap:7px; flex-wrap:wrap }
+    .chip { border:1px solid var(--line); border-radius:999px; background:var(--panel); padding:6px 12px; cursor:pointer; color:var(--dim); font-size:12.5px }
+    .chip[aria-pressed=true] { background:var(--panel-3); border-color:#3c424c; color:var(--fg) }
+    .product-search { width:min(320px,100%); border:1px solid var(--line); border-radius:7px; background:var(--panel); padding:8px 11px; color:var(--fg) }
+    .thumbs { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:14px }
+    .thumb { min-width:0; overflow:hidden; border:1px solid var(--line); border-radius:8px; background:var(--panel) }
+    .thumb:hover { border-color:#3c424c }
+    .thumb-image { position:relative; aspect-ratio:1; background:#fff; overflow:hidden }
+    .thumb-image a { display:block; width:100%; height:100% }
+    .thumb-image img { display:block; width:100%; height:100%; object-fit:contain }
+    .discount { position:absolute; top:8px; right:8px; border-radius:999px; padding:4px 7px; background:var(--err); color:#fff; font:11px var(--mono) }
+    .thumb-body { padding:10px }
+    .thumb-title { height:38px; overflow:hidden; color:var(--fg); font-size:12.5px; line-height:1.45 }
+    .thumb-price { margin-top:8px; font-weight:650 }
+    .thumb-old-price { margin-left:7px; color:var(--faint); font-size:11px; text-decoration:line-through }
+    .thumb-foot { display:flex; align-items:center; justify-content:space-between; gap:7px; margin-top:9px }
+    .thumb-sku { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--dim); font:10.5px var(--mono) }
+    .image-state { flex:none; color:var(--accent); font:9.5px var(--mono); text-transform:uppercase }
+    .image-state.error,.image-state.missing,.image-state.stale { color:var(--err) }
+    .pagination { display:flex; justify-content:center; align-items:center; gap:12px; margin-top:22px }
+    .grid-empty { grid-column:1/-1; padding:60px 20px; border:1px solid var(--line); border-radius:8px; color:var(--faint); text-align:center }
+    .url-box { display:flex; align-items:center; gap:10px; border:1px solid var(--line); border-radius:7px; background:var(--bg); padding:10px 12px }
+    .url-box code { min-width:0; overflow:auto; color:var(--accent); white-space:nowrap; font:12px var(--mono) }
+    .steps { margin:0; padding-left:20px; color:var(--dim); font-size:13px }
+    .steps li { margin-bottom:9px }
+    [hidden] { display:none !important }
+    .spinner { display:inline-block; width:11px; height:11px; border:2px solid var(--line); border-top-color:var(--accent); border-radius:50%; animation:spin .7s linear infinite; vertical-align:-1px; margin-right:5px }
+    @keyframes spin { to { transform:rotate(360deg) } }
+    @media(max-width:760px) {
+      .shell { grid-template-columns:1fr }
+      .rail { flex-direction:row; align-items:center; overflow:auto; padding:12px 16px }
+      .rail-label,.rail-note { display:none }
+      #clients { display:flex; gap:8px }
+      .client { width:auto; min-width:145px }
+      .content,.topbar { padding-left:16px; padding-right:16px }
+      .table-wrap { overflow:auto }
+      .editor { grid-template-columns:1fr }
+      .preview-dock { position:static }
+    }
+    @media(min-width:761px) and (max-width:1100px) { .editor { grid-template-columns:1fr } .preview-dock { position:static; max-width:500px } }
+    @media(prefers-reduced-motion:reduce) { .spinner { animation:none } }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="rail">
+      <div class="wordmark"><span class="dot"></span> Feed Renderer</div>
+      <div>
+        <span class="micro rail-label">Klienti</span>
+        <div id="clients"><div class="client-meta" style="padding:9px 10px"><span class="spinner"></span>Načítavam</div></div>
+      </div>
+      <div class="rail-note">Lokálny nástroj · 127.0.0.1</div>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <div class="topbar-row">
+          <div>
+            <h1 id="client-title">Feed Renderer</h1>
+            <div class="sub" id="client-sub">Načítavam skutočné dáta z feedu…</div>
+          </div>
+          <div style="display:flex;gap:9px">
+            <button class="btn" id="refresh">Obnoviť feed</button>
+            <button class="btn primary" id="start-render" disabled>Renderovať a publikovať</button>
+          </div>
+        </div>
+        <nav class="tabs" role="tablist" aria-label="Sekcie klienta">
+          <button class="tab" role="tab" aria-selected="true" data-view="overview">Prehľad</button>
+          <button class="tab" role="tab" aria-selected="false" data-view="template">Šablóna</button>
+          <button class="tab" role="tab" aria-selected="false" data-view="products">Produkty</button>
+          <button class="tab" role="tab" aria-selected="false" data-view="meta">Feed pre Meta</button>
+        </nav>
+      </header>
+
+      <main class="content">
+        <div class="notice" id="error" role="alert"></div>
+        <section id="v-overview">
+          <div class="stats">
+            <div class="stat"><span class="micro">Vo feede</span><div class="n" id="source-count">—</div></div>
+            <div class="stat"><span class="micro">Po filtroch</span><div class="n" id="eligible-count">—</div></div>
+            <div class="stat"><span class="micro">Vyrenderované</span><div class="n" id="rendered-count">—</div></div>
+            <div class="stat"><span class="micro">Neplatné položky</span><div class="n" id="invalid-count">—</div></div>
+            <div class="stat"><span class="micro">Verzia šablóny</span><div class="n muted" id="template-version">—</div></div>
+          </div>
+
+          <div class="card" id="render-status-card" hidden>
+            <div class="card-head"><h2>Priebeh renderu</h2><span class="tag" id="render-status-tag">—</span></div>
+            <div class="card-body">
+              <div id="render-stage">Čakám…</div>
+              <div class="progress-track"><div class="progress-bar" id="render-progress-bar"></div></div>
+              <div class="progress-meta">
+                <span id="render-progress-count">0 / 0</span>
+                <span id="render-progress-detail">0 renderovaných · 0 preskočených · 0 chýb</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><h2>História behov</h2><span class="micro">Posledných 20</span></div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Začiatok</th><th>Trvanie</th><th class="num">Renderované</th><th class="num">Preskočené</th><th class="num">Chyby</th><th>Stav</th></tr></thead>
+                <tbody id="runs"><tr><td colspan="6" class="empty">Načítavam históriu…</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section id="v-template" hidden>
+          <div class="editor">
+            <div>
+              <div class="card sample-card">
+                <div class="card-head"><h2>Ukážkový produkt</h2></div>
+                <div class="card-body">
+                  <div class="field">
+                    <label for="sample-product">Náhľad počítaj na tomto SKU</label>
+                    <select id="sample-product"><option>Načítavam produkty…</option></select>
+                  </div>
+                </div>
+              </div>
+              <div id="editor-fields"></div>
+            </div>
+
+            <div class="preview-dock">
+              <div class="plinth">
+                <div class="plinth-head">
+                  <span class="micro">Živý náhľad</span>
+                  <div class="toggle">
+                    <button id="preview-before" aria-pressed="false">Pred</button>
+                    <button id="preview-after" aria-pressed="true">Po</button>
+                  </div>
+                </div>
+                <div class="preview-stage">
+                  <img id="preview-image" alt="Náhľad produktového obrázka">
+                  <div class="preview-loading" id="preview-loading"><span><span class="spinner"></span>Renderujem JPEG…</span></div>
+                </div>
+                <div class="plinth-foot">
+                  <span class="micro" id="preview-format">1080 × 1080 · JPEG</span>
+                  <span class="micro mono" id="preview-sku">—</span>
+                </div>
+              </div>
+              <div class="preview-actions">
+                <button class="btn" id="discard-template">Zahodiť zmeny</button>
+                <button class="btn primary" id="save-template">Uložiť šablónu</button>
+              </div>
+              <div class="save-note" id="save-note"></div>
+              <div class="preview-error" id="preview-error"></div>
+            </div>
+          </div>
+        </section>
+        <section id="v-products" hidden>
+          <div class="products-toolbar">
+            <div class="chips">
+              <button class="chip" data-category="all" data-label="Všetky" aria-pressed="true">Všetky</button>
+              <button class="chip" data-category="discounted" data-label="So zľavou" aria-pressed="false">So zľavou</button>
+              <button class="chip" data-category="changedToday" data-label="Zmenené dnes" aria-pressed="false">Zmenené dnes</button>
+              <button class="chip" data-category="errors" data-label="Chyby" aria-pressed="false">Chyby</button>
+            </div>
+            <input class="product-search" id="product-search" type="search" placeholder="Hľadať podľa SKU alebo názvu…">
+          </div>
+          <div class="thumbs" id="product-grid"><div class="grid-empty"><span class="spinner"></span>Načítavam produkty z R2…</div></div>
+          <div class="pagination">
+            <button class="btn" id="products-prev">Predchádzajúca</button>
+            <span class="mono" id="products-page">—</span>
+            <button class="btn" id="products-next">Ďalšia</button>
+          </div>
+        </section>
+        <section id="v-meta" hidden>
+          <div class="card">
+            <div class="card-head"><h2>Supplementary feed</h2><span class="tag">Aktívny</span></div>
+            <div class="card-body">
+              <div class="url-box"><code id="meta-feed-url">—</code><button class="btn" id="copy-feed-url" style="margin-left:auto">Kopírovať</button></div>
+              <div class="sub" id="meta-feed-detail" style="margin-top:10px">—</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h2>Napojenie v Commerce Manageri</h2></div>
+            <div class="card-body">
+              <ol class="steps">
+                <li>Katalóg → <strong>Data Sources</strong> → Add supplementary feed</li>
+                <li>Zdroj nastav na URL vyššie a scheduled fetch každé 4 hodiny.</li>
+                <li>Mapovanie: <span class="mono">id → id</span>, <span class="mono">image_link → image_link</span>.</li>
+                <li>Po prvom fetchi skontroluj náhľad niekoľkých SKU priamo v katalógu.</li>
+              </ol>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var selectedId = null;
+      var clients = [];
+      var currentClient = null;
+      var products = [];
+      var selectedProduct = null;
+      var draft = null;
+      var previewMode = 'after';
+      var previewTimer = null;
+      var latestPreviewRequest = 0;
+      var renderedPreviewUrl = null;
+      var renderPollTimer = null;
+      var announcedJobId = null;
+      var gridCategory = 'all';
+      var gridOffset = 0;
+      var gridSearch = '';
+      var gridTotal = 0;
+      var gridLoaded = false;
+      var gridRequestId = 0;
+      var gridSearchTimer = null;
+      var gridPageSize = 60;
+      var number = new Intl.NumberFormat('sk-SK');
+      var date = new Intl.DateTimeFormat('sk-SK', { dateStyle:'short', timeStyle:'short' });
+
+      function el(id) { return document.getElementById(id); }
+      function count(value) { return value == null ? '—' : number.format(value); }
+      function when(value) { return value ? date.format(new Date(value)) : 'zatiaľ neprebehol'; }
+      function duration(ms) {
+        if (ms == null) return '—';
+        var seconds = Math.round(ms / 1000);
+        return Math.floor(seconds / 60) + ' m ' + String(seconds % 60).padStart(2, '0') + ' s';
+      }
+      function escapeHtml(value) {
+        return String(value).replace(/[&<>'"]/g, function (char) {
+          return ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' })[char];
+        });
+      }
+      async function apiRequest(path, options) {
+        var response = await fetch(path, Object.assign({ headers:{ accept:'application/json' } }, options || {}));
+        var body = await response.json();
+        if (!response.ok) throw new Error(body.error || 'Request zlyhal.');
+        return body;
+      }
+      function api(path) { return apiRequest(path); }
+      function clone(value) { return JSON.parse(JSON.stringify(value)); }
+      function valueAt(object, path) {
+        return path.split('.').reduce(function (value, key) { return value && value[key]; }, object);
+      }
+      function setValueAt(object, path, value) {
+        var keys = path.split('.');
+        var target = object;
+        keys.slice(0, -1).forEach(function (key) { target = target[key]; });
+        target[keys[keys.length - 1]] = value;
+      }
+      function money(amount, currency) {
+        if (amount == null) return '—';
+        return new Intl.NumberFormat('sk-SK', { style:'currency', currency:currency || 'EUR' }).format(amount);
+      }
+      function showError(error) {
+        el('error').classList.remove('ok');
+        el('error').textContent = error.message;
+        el('error').style.display = 'block';
+      }
+      function showMessage(message) {
+        el('error').classList.add('ok');
+        el('error').textContent = message;
+        el('error').style.display = 'block';
+      }
+      function clearError() { el('error').style.display = 'none'; }
+
+      function drawClients() {
+        el('clients').innerHTML = clients.map(function (client) {
+          var bad = Boolean(client.error);
+          var meta = bad ? client.error : count(client.feed.eligibleCount) + ' SKU · ' + when(client.state.updatedAt);
+          return '<button class="client" data-id="' + escapeHtml(client.clientId) + '" aria-current="' + String(client.clientId === selectedId) + '">' +
+            '<span class="client-name"><span class="pip ' + (bad ? 'bad' : '') + '"></span>' + escapeHtml(client.name) + '</span>' +
+            '<span class="client-meta">' + escapeHtml(meta) + '</span></button>';
+        }).join('');
+        document.querySelectorAll('.client').forEach(function (button) {
+          button.addEventListener('click', function () { selectClient(button.dataset.id); });
+        });
+      }
+
+      function drawRuns(runs) {
+        if (!runs.length) {
+          el('runs').innerHTML = '<tr><td colspan="6" class="empty">Zatiaľ bez zaznamenaných UI behov. Staršie CLI behy nemali históriu.</td></tr>';
+          return;
+        }
+        el('runs').innerHTML = runs.map(function (run) {
+          var ok = run.status === 'completed';
+          return '<tr><td class="mono">' + escapeHtml(when(run.startedAt)) + '</td>' +
+            '<td class="mono">' + escapeHtml(duration(run.durationMs)) + '</td>' +
+            '<td class="mono num">' + count(run.renderedCount) + '</td>' +
+            '<td class="mono num">' + count(run.skippedCount) + '</td>' +
+            '<td class="mono num">' + count(run.failedCount == null ? run.errorCount : run.failedCount) + '</td>' +
+            '<td><span class="tag ' + (ok ? '' : 'err') + '">' + escapeHtml(run.status || 'neznámy') + '</span></td></tr>';
+        }).join('');
+      }
+
+      function drawClient(client) {
+        el('client-title').textContent = client.name;
+        el('client-sub').innerHTML = 'Lokálny stav <span class="mono">' + escapeHtml(when(client.state.updatedAt)) + '</span> · feed načítaný <span class="mono">' + escapeHtml(when(client.feed.loadedAt)) + '</span>';
+        el('source-count').textContent = count(client.feed.sourceCount);
+        el('eligible-count').textContent = count(client.feed.eligibleCount);
+        el('rendered-count').textContent = count(client.state.renderedCount);
+        el('invalid-count').textContent = count(client.feed.invalidCount);
+        el('template-version').textContent = count(client.templateVersion);
+        var storage = client.config.storage;
+        var feedUrl = [storage.publicBaseUrl, storage.prefix, storage.supplementaryFeedKey]
+          .map(function (part, index) { return index === 0 ? String(part).replace(/\/$/, '') : String(part).replace(/^\/+|\/+$/g, ''); }).join('/');
+        el('meta-feed-url').textContent = feedUrl;
+        el('meta-feed-detail').innerHTML = 'Obsahuje <span class="mono">' + count(client.state.renderedCount) + '</span> riadkov · posledná lokálna aktualizácia <span class="mono">' + escapeHtml(when(client.state.updatedAt)) + '</span> · stĺpce <span class="mono">id, image_link</span>';
+        drawRuns(client.runs || []);
+      }
+
+      function renderField(field) {
+        if (field.kind === 'group') {
+          return '<div class="field-group"><span class="micro group-title">' + escapeHtml(field.label) + '</span>' +
+            field.fields.map(renderField).join('') + '</div>';
+        }
+        var value = valueAt(draft, field.path);
+        var attributes = ' data-path="' + escapeHtml(field.path) + '" data-type="' + escapeHtml(field.type) + '"';
+        if (field.type === 'boolean') {
+          return '<div class="field"><label class="check"><input type="checkbox"' + attributes + (value ? ' checked' : '') + '> ' + escapeHtml(field.label) + '</label></div>';
+        }
+        if (field.type === 'select') {
+          return '<div class="field"><label>' + escapeHtml(field.label) + '</label><select' + attributes + '>' +
+            field.options.map(function (option) { return '<option value="' + escapeHtml(option) + '"' + (option === value ? ' selected' : '') + '>' + escapeHtml(option) + '</option>'; }).join('') +
+            '</select></div>';
+        }
+        if (field.type === 'color') {
+          return '<div class="field"><span class="field-label">' + escapeHtml(field.label) + '</span><div class="color-row">' +
+            '<input type="color" value="' + escapeHtml(value) + '"' + attributes + '><span class="color-value">' + escapeHtml(value) + '</span></div></div>';
+        }
+        if (field.type === 'number') {
+          return '<div class="field"><span class="field-label">' + escapeHtml(field.label) + '</span><div class="range-row">' +
+            '<input type="range" value="' + escapeHtml(value) + '" min="' + field.minimum + '" max="' + field.maximum + '" step="' + (field.step || 1) + '"' + attributes + '>' +
+            '<span class="range-value">' + escapeHtml(value) + escapeHtml(field.suffix || '') + '</span></div></div>';
+        }
+        return '<div class="field"><label>' + escapeHtml(field.label) + '</label><input type="text" value="' + escapeHtml(value) + '"' + attributes + '></div>';
+      }
+
+      function bindEditorInputs() {
+        el('editor-fields').querySelectorAll('[data-path]').forEach(function (input) {
+          input.addEventListener('input', function () {
+            var type = input.dataset.type;
+            var value = type === 'boolean' ? input.checked : type === 'number' ? Number(input.value) : input.value;
+            setValueAt(draft, input.dataset.path, value);
+            var valueLabel = input.parentElement.querySelector('.range-value,.color-value');
+            if (valueLabel) {
+              var schemaField = findSchemaField(input.dataset.path);
+              valueLabel.textContent = String(value) + (schemaField.suffix || '');
+            }
+            schedulePreview();
+          });
+        });
+      }
+
+      function findSchemaField(path) {
+        function find(fields) {
+          for (var i = 0; i < fields.length; i += 1) {
+            if (fields[i].path === path) return fields[i];
+            if (fields[i].fields) {
+              var nested = find(fields[i].fields);
+              if (nested) return nested;
+            }
+          }
+          return {};
+        }
+        return find(currentClient.editorSchema);
+      }
+
+      function drawEditor() {
+        if (!currentClient || !draft) return;
+        el('editor-fields').innerHTML = currentClient.editorSchema.map(function (section) {
+          return '<div class="card"><div class="card-head"><h2>' + escapeHtml(section.label) + '</h2></div>' +
+            '<div class="card-body">' + section.fields.map(renderField).join('') + '</div></div>';
+        }).join('');
+        bindEditorInputs();
+        el('preview-format').textContent = currentClient.config.output.width + ' × ' + currentClient.config.output.height + ' · JPEG q' + currentClient.config.output.quality;
+        el('save-template').textContent = 'Uložiť ako v' + (currentClient.templateVersion + 1);
+        el('save-note').textContent = 'Uloženie zvýši verziu šablóny a označí približne ' + count(currentClient.feed.eligibleCount) + ' SKU na prerenderovanie.';
+      }
+
+      function imageStatusLabel(status) {
+        return ({ ready:'R2', stale:'neaktuálne', missing:'chýba', error:'chyba' })[status] || status;
+      }
+
+      function drawProductGrid(result) {
+        gridTotal = result.total;
+        document.querySelectorAll('.chip').forEach(function (chip) {
+          chip.setAttribute('aria-pressed', String(chip.dataset.category === gridCategory));
+          chip.textContent = chip.dataset.label + ' · ' + count(result.facets[chip.dataset.category]);
+        });
+        if (!result.products.length) {
+          el('product-grid').innerHTML = '<div class="grid-empty">Tomuto filtru nezodpovedá žiadny produkt.</div>';
+        } else {
+          el('product-grid').innerHTML = result.products.map(function (product) {
+            var image = product.renderedImageUrl
+              ? '<a href="' + escapeHtml(product.renderedImageUrl) + '" target="_blank" rel="noopener"><img loading="lazy" src="' + escapeHtml(product.renderedImageUrl) + '" alt="' + escapeHtml(product.title || product.id) + '"></a>'
+              : '<div class="grid-empty" style="border:0;padding:70px 10px">R2 obrázok ' + escapeHtml(imageStatusLabel(product.imageStatus)) + '</div>';
+            var oldPrice = product.price.sale == null ? '' : '<span class="thumb-old-price">' + escapeHtml(money(product.price.regular, product.price.currency)) + '</span>';
+            var discount = product.discountPercent == null ? '' : '<span class="discount">-' + product.discountPercent + ' %</span>';
+            return '<article class="thumb"><div class="thumb-image">' + image + discount + '</div><div class="thumb-body">' +
+              '<div class="thumb-title">' + escapeHtml(product.title || 'Bez názvu') + '</div>' +
+              '<div class="thumb-price">' + escapeHtml(money(product.price.current, product.price.currency)) + oldPrice + '</div>' +
+              '<div class="thumb-foot"><span class="thumb-sku" title="' + escapeHtml(product.id) + '">' + escapeHtml(product.id) + '</span>' +
+              '<span class="image-state ' + escapeHtml(product.imageStatus) + '">' + escapeHtml(imageStatusLabel(product.imageStatus)) + '</span></div></div></article>';
+          }).join('');
+          el('product-grid').querySelectorAll('img').forEach(function (image) {
+            image.addEventListener('error', function () {
+              image.closest('.thumb-image').classList.add('broken');
+              image.replaceWith(Object.assign(document.createElement('div'), { className:'grid-empty', textContent:'R2 obrázok sa nepodarilo načítať' }));
+            }, { once:true });
+          });
+        }
+        var page = Math.floor(gridOffset / gridPageSize) + 1;
+        var pages = Math.max(1, Math.ceil(gridTotal / gridPageSize));
+        el('products-page').textContent = page + ' / ' + pages;
+        el('products-prev').disabled = gridOffset === 0;
+        el('products-next').disabled = gridOffset + gridPageSize >= gridTotal;
+      }
+
+      async function loadProductGrid() {
+        if (!selectedId) return;
+        var requestId = ++gridRequestId;
+        el('product-grid').innerHTML = '<div class="grid-empty"><span class="spinner"></span>Načítavam produkty z R2…</div>';
+        try {
+          var query = new URLSearchParams({
+            limit:String(gridPageSize), offset:String(gridOffset), filter:gridSearch, category:gridCategory
+          });
+          var result = await api('/api/client/' + encodeURIComponent(selectedId) + '/products?' + query.toString());
+          if (requestId !== gridRequestId) return;
+          gridLoaded = true;
+          drawProductGrid(result);
+        } catch (error) {
+          if (requestId === gridRequestId) {
+            el('product-grid').innerHTML = '<div class="grid-empty">' + escapeHtml(error.message) + '</div>';
+          }
+        }
+      }
+
+      function stageLabel(stage) {
+        return ({
+          queued:'Čaká na spustenie', running:'Prebieha', loadingRemoteState:'Načítavam stav z R2', loadingFeed:'Načítavam produktový feed',
+          preparing:'Porovnávam content hash', rendering:'Renderujem a nahrávam obrázky', finalizing:'Pripravujem supplementary feed',
+          publishingMetadata:'Publikujem supplementary feed', completed:'Dokončené', completed_with_errors:'Dokončené s chybami',
+          savingHistory:'Ukladám históriu', finalizing:'Dokončujem', failed:'Render zlyhal', idle:'Nečinný'
+        })[stage] || stage;
+      }
+
+      function terminalJob(job) {
+        return ['completed','completed_with_errors','failed'].includes(job.status);
+      }
+
+      function drawRenderJob(job) {
+        var active = job.status !== 'idle';
+        el('render-status-card').hidden = !active;
+        el('start-render').disabled = ['queued','running','finalizing'].includes(job.status);
+        if (!active) return;
+        var total = job.totalCount || 0;
+        var completed = job.completedCount || 0;
+        var percent = terminalJob(job) ? 100 : total ? Math.min(100, Math.round(completed / total * 100)) : 2;
+        el('render-progress-bar').style.width = percent + '%';
+        el('render-stage').textContent = stageLabel(job.stage);
+        el('render-progress-count').textContent = count(completed) + ' / ' + count(total);
+        el('render-progress-detail').textContent = count(job.renderedCount || 0) + ' renderovaných · ' + count(job.skippedCount || 0) + ' preskočených · ' + count(job.failedCount || 0) + ' chýb';
+        el('render-status-tag').textContent = stageLabel(job.status);
+        el('render-status-tag').className = 'tag' + (job.status === 'failed' || job.status === 'completed_with_errors' ? ' err' : '');
+        if (job.message) el('render-stage').textContent += ' — ' + job.message;
+      }
+
+      async function refreshOverview() {
+        var client = await api('/api/client/' + encodeURIComponent(selectedId));
+        drawClient(client);
+        var index = clients.findIndex(function (item) { return item.clientId === selectedId; });
+        if (index !== -1) clients[index] = Object.assign({}, clients[index], client);
+        drawClients();
+        gridLoaded = false;
+      }
+
+      async function pollRenderStatus() {
+        clearTimeout(renderPollTimer);
+        try {
+          var result = await api('/api/client/' + encodeURIComponent(selectedId) + '/render/status');
+          drawRenderJob(result.job);
+          if (['queued','running','finalizing'].includes(result.job.status)) {
+            renderPollTimer = setTimeout(pollRenderStatus, 1000);
+          } else if (terminalJob(result.job) && result.job.id !== announcedJobId) {
+            announcedJobId = result.job.id;
+            await refreshOverview();
+            if (result.job.status === 'completed') showMessage('Render a publikovanie do R2 boli úspešne dokončené.');
+            else if (result.job.status === 'completed_with_errors') showError(new Error('Render skončil s chybami. Detaily sú v histórii behu.'));
+            else showError(new Error(result.job.message || 'Render zlyhal.'));
+          }
+        } catch (error) { showError(error); }
+      }
+
+      function drawProductOptions() {
+        var select = el('sample-product');
+        select.innerHTML = products.map(function (product) {
+          var discount = product.discountPercent == null ? '' : ' · zľava ' + product.discountPercent + ' %';
+          return '<option value="' + escapeHtml(product.id) + '"' + (selectedProduct && product.id === selectedProduct.id ? ' selected' : '') + '>' +
+            escapeHtml(product.id + ' — ' + (product.title || 'bez názvu') + discount) + '</option>';
+        }).join('');
+      }
+
+      async function loadProducts() {
+        var result = await api('/api/client/' + encodeURIComponent(selectedId) + '/products?limit=1000');
+        products = result.products;
+        if (!products.length) throw new Error('Feed nemá žiadny produkt, ktorý prešiel filtrami.');
+        selectedProduct = products.find(function (product) { return product.discountPercent != null; }) || products[0];
+        drawProductOptions();
+        updatePreviewImage();
+        schedulePreview(true);
+      }
+
+      function setPreviewLoading(loading) {
+        el('preview-loading').hidden = !loading;
+      }
+      function updatePreviewImage() {
+        if (!selectedProduct) return;
+        el('preview-sku').textContent = selectedProduct.id;
+        if (previewMode === 'before') {
+          el('preview-image').src = selectedProduct.imageUrl;
+          el('preview-image').style.objectFit = 'contain';
+          setPreviewLoading(false);
+        } else if (renderedPreviewUrl) {
+          el('preview-image').src = renderedPreviewUrl;
+          el('preview-image').style.objectFit = 'contain';
+        }
+      }
+
+      function schedulePreview(immediate) {
+        clearTimeout(previewTimer);
+        if (!selectedProduct || !draft) return;
+        previewTimer = setTimeout(requestPreview, immediate ? 0 : 250);
+      }
+
+      async function requestPreview() {
+        var requestId = ++latestPreviewRequest;
+        el('preview-error').textContent = '';
+        if (previewMode === 'after') setPreviewLoading(true);
+        try {
+          var response = await fetch('/api/client/' + encodeURIComponent(selectedId) + '/preview', {
+            method:'POST',
+            headers:{ 'content-type':'application/json', accept:'image/jpeg' },
+            body:JSON.stringify({ sku:selectedProduct.id, template:draft.template, brand:draft.brand })
+          });
+          if (!response.ok) {
+            var errorBody = await response.json();
+            throw new Error(errorBody.error || 'Náhľad sa nepodarilo vyrenderovať.');
+          }
+          var blob = await response.blob();
+          if (requestId !== latestPreviewRequest) return;
+          if (renderedPreviewUrl) URL.revokeObjectURL(renderedPreviewUrl);
+          renderedPreviewUrl = URL.createObjectURL(blob);
+          updatePreviewImage();
+        } catch (error) {
+          if (requestId === latestPreviewRequest && !/superseded/.test(error.message)) el('preview-error').textContent = error.message;
+        } finally {
+          if (requestId === latestPreviewRequest && previewMode === 'after') setPreviewLoading(false);
+        }
+      }
+
+      function setPreviewMode(mode) {
+        previewMode = mode;
+        el('preview-before').setAttribute('aria-pressed', String(mode === 'before'));
+        el('preview-after').setAttribute('aria-pressed', String(mode === 'after'));
+        updatePreviewImage();
+        if (mode === 'after' && !renderedPreviewUrl) schedulePreview(true);
+      }
+
+      async function setupEditor(client) {
+        latestPreviewRequest += 1;
+        clearTimeout(previewTimer);
+        if (renderedPreviewUrl) URL.revokeObjectURL(renderedPreviewUrl);
+        renderedPreviewUrl = null;
+        currentClient = client;
+        draft = { brand:clone(client.config.brand), template:clone(client.config.template) };
+        products = [];
+        selectedProduct = null;
+        gridOffset = 0;
+        gridLoaded = false;
+        gridRequestId += 1;
+        drawEditor();
+        el('sample-product').innerHTML = '<option>Načítavam produkty…</option>';
+        await loadProducts();
+      }
+
+      async function selectClient(id, refresh) {
+        clearTimeout(renderPollTimer);
+        selectedId = id;
+        drawClients();
+        clearError();
+        el('client-sub').innerHTML = '<span class="spinner"></span>Načítavam dáta klienta…';
+        try {
+          var client = await api('/api/client/' + encodeURIComponent(id) + (refresh ? '?refresh=1' : ''));
+          drawClient(client);
+          await setupEditor(client);
+          var index = clients.findIndex(function (item) { return item.clientId === id; });
+          if (index !== -1) clients[index] = Object.assign({}, clients[index], client);
+          drawClients();
+          await pollRenderStatus();
+        } catch (error) { showError(error); }
+      }
+
+      async function start() {
+        try {
+          var data = await api('/api/clients');
+          clients = data.clients;
+          if (!clients.length) throw new Error('V priečinku clients nie je žiadna konfigurácia.');
+          var first = clients.find(function (client) { return !client.error; });
+          selectedId = first ? first.clientId : clients[0].clientId;
+          drawClients();
+          await selectClient(selectedId);
+        } catch (error) { showError(error); }
+      }
+
+      el('refresh').addEventListener('click', function () {
+        if (selectedId) selectClient(selectedId, true);
+      });
+      el('sample-product').addEventListener('change', function () {
+        selectedProduct = products.find(function (product) { return product.id === el('sample-product').value; });
+        renderedPreviewUrl = renderedPreviewUrl && (URL.revokeObjectURL(renderedPreviewUrl), null);
+        updatePreviewImage();
+        schedulePreview(true);
+      });
+      el('preview-before').addEventListener('click', function () { setPreviewMode('before'); });
+      el('preview-after').addEventListener('click', function () { setPreviewMode('after'); });
+      el('discard-template').addEventListener('click', function () {
+        draft = { brand:clone(currentClient.config.brand), template:clone(currentClient.config.template) };
+        drawEditor();
+        schedulePreview(true);
+      });
+      document.querySelectorAll('.chip').forEach(function (chip) {
+        chip.addEventListener('click', function () {
+          gridCategory = chip.dataset.category;
+          gridOffset = 0;
+          loadProductGrid();
+        });
+      });
+      el('product-search').addEventListener('input', function () {
+        clearTimeout(gridSearchTimer);
+        gridSearch = el('product-search').value;
+        gridOffset = 0;
+        gridSearchTimer = setTimeout(loadProductGrid, 300);
+      });
+      el('products-prev').addEventListener('click', function () {
+        gridOffset = Math.max(0, gridOffset - gridPageSize);
+        loadProductGrid();
+        window.scrollTo({ top:0, behavior:'smooth' });
+      });
+      el('products-next').addEventListener('click', function () {
+        gridOffset += gridPageSize;
+        loadProductGrid();
+        window.scrollTo({ top:0, behavior:'smooth' });
+      });
+      el('copy-feed-url').addEventListener('click', async function () {
+        try {
+          await navigator.clipboard.writeText(el('meta-feed-url').textContent);
+          showMessage('URL supplementary feedu bola skopírovaná.');
+        } catch (error) { showError(new Error('URL sa nepodarilo skopírovať: ' + error.message)); }
+      });
+      el('save-template').addEventListener('click', async function () {
+        var button = el('save-template');
+        button.disabled = true;
+        clearError();
+        try {
+          var result = await apiRequest('/api/client/' + encodeURIComponent(selectedId) + '/template', {
+            method:'PUT',
+            headers:{ 'content-type':'application/json', accept:'application/json' },
+            body:JSON.stringify({ template:draft.template, brand:draft.brand })
+          });
+          currentClient.config = result.config;
+          currentClient.templateVersion = result.templateVersion;
+          currentClient.editorSchema = result.editorSchema;
+          draft = { brand:clone(result.config.brand), template:clone(result.config.template) };
+          el('template-version').textContent = count(result.templateVersion);
+          drawEditor();
+          showMessage('Šablóna bola uložená ako verzia ' + result.templateVersion + '. Na prerenderovanie je pripravených približne ' + count(result.estimatedRerenderCount) + ' SKU.');
+        } catch (error) { showError(error); }
+        finally { button.disabled = false; }
+      });
+      el('start-render').addEventListener('click', async function () {
+        var unsaved = currentClient && JSON.stringify(draft) !== JSON.stringify({ brand:currentClient.config.brand, template:currentClient.config.template });
+        var warning = unsaved ? 'Neuložené zmeny sa nepoužijú. ' : '';
+        if (!window.confirm(warning + 'Spustiť render a publikovať výsledok do R2?')) return;
+        clearError();
+        el('start-render').disabled = true;
+        try {
+          var result = await apiRequest('/api/client/' + encodeURIComponent(selectedId) + '/render', {
+            method:'POST',
+            headers:{ 'content-type':'application/json', accept:'application/json' },
+            body:JSON.stringify({ force:false })
+          });
+          drawRenderJob(result.job);
+          renderPollTimer = setTimeout(pollRenderStatus, 300);
+          document.querySelector('[data-view="overview"]').click();
+        } catch (error) {
+          el('start-render').disabled = false;
+          showError(error);
+        }
+      });
+      document.querySelectorAll('.tab').forEach(function (tab) {
+        tab.addEventListener('click', function () {
+          document.querySelectorAll('.tab').forEach(function (item) { item.setAttribute('aria-selected', String(item === tab)); });
+          document.querySelectorAll('main section').forEach(function (view) { view.hidden = view.id !== 'v-' + tab.dataset.view; });
+          if (tab.dataset.view === 'template') updatePreviewImage();
+          if (tab.dataset.view === 'products' && !gridLoaded) loadProductGrid();
+        });
+      });
+      start();
+    })();
+  </script>
+</body>
+</html>

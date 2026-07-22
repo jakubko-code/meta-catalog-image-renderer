@@ -1,0 +1,95 @@
+{
+  "clientId": "vintino",
+  "name": "Vintino",
+  "templateVersion": 2,
+  "feed": {
+    "url": "https://www.vintino.sk/facebook/export/products.xml?hash=Qohbsw06JmihiZwzc4vzR",
+    "format": "xml",
+    "productPath": "rss.channel.item",
+    "fields": {
+      "id": "g:id",
+      "title": "title",
+      "imageUrl": "g:image_link",
+      "price": "g:price",
+      "salePrice": "g:sale_price",
+      "availability": "g:availability"
+    }
+  },
+  "filters": {
+    "requireId": true,
+    "requireImage": true,
+    "rules": [
+      {
+        "field": "availability",
+        "operator": "in",
+        "value": [
+          "in_stock",
+          "preorder"
+        ]
+      }
+    ]
+  },
+  "output": {
+    "width": 1080,
+    "height": 1080,
+    "format": "jpeg",
+    "quality": 90
+  },
+  "brand": {
+    "logoPath": "assets/clients/vintino/logo.svg",
+    "primaryColor": "#D9AF42",
+    "accentColor": "#CB2D3E",
+    "textColor": "#FFFFFF",
+    "fontRegularPath": "assets/fonts/Poppins-Regular.ttf",
+    "fontBoldPath": "assets/fonts/Poppins-Bold.ttf"
+  },
+  "template": {
+    "backgroundColor": "#F7F5EF",
+    "padding": 48,
+    "productImage": {
+      "fit": "contain",
+      "heightPercent": 62
+    },
+    "logo": {
+      "show": true,
+      "position": "topLeft",
+      "maxWidth": 220
+    },
+    "price": {
+      "show": true,
+      "position": "bottomLeft",
+      "fontSize": 64,
+      "showOriginalPrice": true,
+      "saleLabel": "AKCIOVÁ CENA",
+      "regularLabel": "CENA",
+      "backgroundColor": "#111111",
+      "textColor": "#FFFFFF",
+      "originalPriceColor": "#D9AF42"
+    },
+    "discountBadge": {
+      "show": true,
+      "minimumPercent": 1,
+      "position": "topRight",
+      "text": "-{percent} %",
+      "backgroundColor": "#CB2D3E",
+      "textColor": "#FFFFFF"
+    },
+    "title": {
+      "show": true,
+      "fontSize": 30,
+      "maxCharacters": 72,
+      "textColor": "#111111"
+    }
+  },
+  "processing": {
+    "concurrency": 4
+  },
+  "storage": {
+    "bucket": "meta-catalog-images",
+    "publicBaseUrl": "https://pub-6f5db5933d754aaa989602bb3e31fdca.r2.dev",
+    "prefix": "vintino",
+    "imageKeyPrefix": "images",
+    "stateKey": "state.json",
+    "supplementaryFeedKey": "supplementary.csv"
+  }
+}
