@@ -2,7 +2,9 @@ import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import {
+  analyzeClientFeedHandler,
   clientHandler,
+  createClientHandler,
   errorResponse,
   listClientsHandler,
   previewHandler,
@@ -24,7 +26,7 @@ const previewPath = /^\/api\/client\/([a-z0-9][a-z0-9-]*)\/preview$/;
 const templatePath = /^\/api\/client\/([a-z0-9][a-z0-9-]*)\/template$/;
 const renderPath = /^\/api\/client\/([a-z0-9][a-z0-9-]*)\/render$/;
 const renderStatusPath = /^\/api\/client\/([a-z0-9][a-z0-9-]*)\/render\/status$/;
-const MAX_JSON_BYTES = 1024 * 1024;
+const MAX_JSON_BYTES = 4 * 1024 * 1024;
 
 function send(response, result) {
   response.writeHead(result.status, {
@@ -75,6 +77,16 @@ async function route(request, response) {
 
   if (request.method === "GET" && url.pathname === "/api/clients") {
     send(response, await listClientsHandler({ url }));
+    return;
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/clients/analyze-feed") {
+    send(response, await analyzeClientFeedHandler({ url, body: await readJson(request) }));
+    return;
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/clients") {
+    send(response, await createClientHandler({ url, body: await readJson(request) }));
     return;
   }
 

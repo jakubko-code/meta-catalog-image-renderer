@@ -23,6 +23,19 @@ zatvorení karty, kým zostane spustený Node server.
 Záložka Produkty načítava verejné R2 obrázky po 60 položkách. Podporuje
 vyhľadávanie podľa SKU alebo názvu a filtre pre zľavy, dnešné zmeny a chyby.
 
+### Viacerí klienti
+
+V ľavom paneli zvoľ **Pridať klienta**. Formulár pred uložením stiahne a overí
+XML alebo CSV feed, mapovanie produktových polí a filtre. Nový klient dostane
+samostatný súbor `clients/<id>.json`, logo v `assets/clients/<id>/`, lokálny stav
+v `out/<id>/` a R2 prefix `<id>/`. Bucket a verejná R2 doména sa preberú z
+existujúcej konfigurácie; R2 prístupové kľúče zostávajú spoločné.
+
+Po založení klienta najprv skontroluj živý náhľad a až potom spusti prvé
+publikovanie. Aby nového klienta spracovával aj denný GitHub Action, jeho JSON a
+logo musia byť commitnuté a odoslané do repozitára. Workflow všetky konfigurácie
+v `clients/` objaví automaticky.
+
 ## Automatické publikovanie cez GitHub Actions
 
 Workflow `.github/workflows/publish-catalogs.yml` sa spúšťa raz denne o 03:17

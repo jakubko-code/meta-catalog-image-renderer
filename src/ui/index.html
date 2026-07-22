@@ -70,7 +70,7 @@
     .field { margin-bottom:15px }
     .field:last-child { margin-bottom:0 }
     .field > label,.field-label { display:block; margin-bottom:6px; color:var(--dim); font-size:12.5px }
-    input[type=text],input[type=number],select { width:100%; border:1px solid var(--line); border-radius:6px; background:var(--bg); padding:8px 10px; color:var(--fg); font:13px var(--sans) }
+    input[type=text],input[type=number],input[type=url],input[type=file],select { width:100%; border:1px solid var(--line); border-radius:6px; background:var(--bg); padding:8px 10px; color:var(--fg); font:13px var(--sans) }
     input[type=color] { width:38px; height:32px; padding:0; border:1px solid var(--line); border-radius:6px; background:none; cursor:pointer }
     input[type=range] { flex:1; accent-color:var(--accent) }
     input[type=checkbox] { width:15px; height:15px; accent-color:var(--accent) }
@@ -130,6 +130,22 @@
     .url-box code { min-width:0; overflow:auto; color:var(--accent); white-space:nowrap; font:12px var(--mono) }
     .steps { margin:0; padding-left:20px; color:var(--dim); font-size:13px }
     .steps li { margin-bottom:9px }
+    .add-client { width:calc(100% - 16px); margin:8px; padding:7px 10px; border:1px dashed var(--line); border-radius:7px; background:none; color:var(--dim); cursor:pointer; text-align:left }
+    .add-client:hover { border-color:var(--accent); color:var(--fg) }
+    dialog { width:min(780px,calc(100vw - 28px)); max-height:calc(100vh - 40px); overflow:auto; border:1px solid var(--line); border-radius:10px; padding:0; background:var(--panel); color:var(--fg); box-shadow:0 24px 80px rgba(0,0,0,.55) }
+    dialog::backdrop { background:rgba(5,6,8,.76) }
+    .dialog-head { position:sticky; top:0; z-index:1; display:flex; align-items:center; justify-content:space-between; gap:16px; padding:16px 18px; border-bottom:1px solid var(--line); background:var(--panel) }
+    .dialog-head h2 { margin:0; font-size:17px }
+    .dialog-body { padding:18px }
+    .dialog-actions { position:sticky; bottom:0; display:flex; justify-content:flex-end; gap:9px; padding:14px 18px; border-top:1px solid var(--line); background:var(--panel) }
+    .form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px 16px }
+    .form-grid .field { margin:0 }
+    .field-wide { grid-column:1/-1 }
+    .mapping-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; padding:14px; border:1px solid var(--line-soft); border-radius:7px; background:var(--bg) }
+    .analysis-box { min-height:46px; padding:11px 12px; border:1px solid var(--line); border-radius:7px; color:var(--dim); font-size:12.5px }
+    .analysis-box.ok { border-color:var(--accent-dim); background:#1a2626; color:#8fd0cb }
+    .analysis-box.err { border-color:#4a2b2a; background:#241a1a; color:#efaaa7 }
+    .section-title { display:block; grid-column:1/-1; margin-top:8px; padding-bottom:7px; border-bottom:1px solid var(--line-soft) }
     [hidden] { display:none !important }
     .spinner { display:inline-block; width:11px; height:11px; border:2px solid var(--line); border-top-color:var(--accent); border-radius:50%; animation:spin .7s linear infinite; vertical-align:-1px; margin-right:5px }
     @keyframes spin { to { transform:rotate(360deg) } }
@@ -144,6 +160,8 @@
       .editor { grid-template-columns:1fr }
       .preview-dock { position:static }
       .usage-grid { grid-template-columns:1fr }
+      .form-grid,.mapping-grid { grid-template-columns:1fr }
+      .field-wide,.section-title { grid-column:1 }
     }
     @media(min-width:761px) and (max-width:1100px) { .editor { grid-template-columns:1fr } .preview-dock { position:static; max-width:500px } }
     @media(prefers-reduced-motion:reduce) { .spinner { animation:none } }
@@ -156,6 +174,7 @@
       <div>
         <span class="micro rail-label">Klienti</span>
         <div id="clients"><div class="client-meta" style="padding:9px 10px"><span class="spinner"></span>Načítavam</div></div>
+        <button class="add-client" id="add-client">＋ Pridať klienta</button>
       </div>
       <div class="rail-note">Lokálny nástroj · 127.0.0.1</div>
     </aside>
@@ -327,6 +346,40 @@
     </div>
   </div>
 
+  <dialog id="client-dialog">
+    <form id="client-form">
+      <div class="dialog-head"><div><h2>Nový klient</h2><div class="sub">Vlastný feed, logo, stav a priečinok v R2</div></div><button class="btn" type="button" id="close-client-dialog">Zavrieť</button></div>
+      <div class="dialog-body">
+        <div class="form-grid">
+          <span class="micro section-title">Klient</span>
+          <div class="field"><label for="new-client-name">Názov klienta</label><input id="new-client-name" type="text" required placeholder="Napr. Môj e-shop"></div>
+          <div class="field"><label for="new-client-id">ID klienta</label><input id="new-client-id" class="mono" type="text" required pattern="[a-z0-9][a-z0-9-]*" placeholder="moj-eshop"><div class="sub">Použije sa aj ako R2 prefix.</div></div>
+
+          <span class="micro section-title">Produktový feed</span>
+          <div class="field field-wide"><label for="new-feed-url">HTTPS URL feedu</label><input id="new-feed-url" type="url" required placeholder="https://example.sk/products.xml"></div>
+          <div class="field"><label for="new-feed-format">Formát</label><select id="new-feed-format"><option value="xml">Google XML</option><option value="csv">CSV</option></select></div>
+          <div class="field" id="new-product-path-field"><label for="new-product-path">Cesta k produktu v XML</label><input id="new-product-path" class="mono" type="text" value="rss.channel.item"></div>
+          <div class="field" id="new-delimiter-field" hidden><label for="new-delimiter">Oddeľovač CSV</label><select id="new-delimiter"><option value=",">čiarka (,)</option><option value=";">bodkočiarka (;)</option><option value="\t">tabulátor</option></select></div>
+          <div class="field field-wide"><span class="field-label">Mapovanie stĺpcov alebo XML elementov</span><div class="mapping-grid">
+            <div class="field"><label for="new-field-id">ID / SKU</label><input id="new-field-id" class="mono" type="text" value="g:id" required></div>
+            <div class="field"><label for="new-field-title">Názov</label><input id="new-field-title" class="mono" type="text" value="title" required></div>
+            <div class="field"><label for="new-field-image">Obrázok</label><input id="new-field-image" class="mono" type="text" value="g:image_link" required></div>
+            <div class="field"><label for="new-field-price">Bežná cena</label><input id="new-field-price" class="mono" type="text" value="g:price" required></div>
+            <div class="field"><label for="new-field-sale">Akciová cena</label><input id="new-field-sale" class="mono" type="text" value="g:sale_price" required></div>
+            <div class="field"><label for="new-field-availability">Dostupnosť</label><input id="new-field-availability" class="mono" type="text" value="g:availability" required></div>
+          </div></div>
+          <div class="field field-wide"><label class="check"><input id="new-availability-filter" type="checkbox" checked> Spracovať iba produkty <span class="mono">in_stock</span> a <span class="mono">preorder</span></label></div>
+
+          <span class="micro section-title">Základ brandingu</span>
+          <div class="field"><label for="new-logo">Logo, maximálne 2 MB</label><input id="new-logo" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml"><div class="sub">Ak ho nepridáš, logo bude v šablóne vypnuté.</div></div>
+          <div class="field"><span class="field-label">Farby</span><div class="color-row"><input id="new-primary-color" type="color" value="#58a6a0" title="Primárna farba"><input id="new-accent-color" type="color" value="#cb2d3e" title="Farba zľavy"><input id="new-background-color" type="color" value="#f7f5ef" title="Pozadie"></div></div>
+          <div class="field field-wide"><div class="analysis-box" id="feed-analysis">Najprv otestuj feed. Nič sa zatiaľ neuloží.</div></div>
+        </div>
+      </div>
+      <div class="dialog-actions"><button class="btn" type="button" id="analyze-feed">Otestovať feed</button><button class="btn primary" id="create-client" type="submit" disabled>Vytvoriť klienta</button></div>
+    </form>
+  </dialog>
+
   <script>
     (function () {
       var selectedId = null;
@@ -349,6 +402,8 @@
       var gridRequestId = 0;
       var gridSearchTimer = null;
       var gridPageSize = 60;
+      var feedAnalysisValid = false;
+      var clientIdEdited = false;
       var number = new Intl.NumberFormat('sk-SK');
       var date = new Intl.DateTimeFormat('sk-SK', { dateStyle:'short', timeStyle:'short' });
 
@@ -406,6 +461,101 @@
         el('error').style.display = 'block';
       }
       function clearError() { el('error').style.display = 'none'; }
+
+      function slug(value) {
+        return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      }
+
+      function clientFormPayload() {
+        var format = el('new-feed-format').value;
+        return {
+          clientId:el('new-client-id').value.trim(),
+          name:el('new-client-name').value.trim(),
+          availabilityFilter:el('new-availability-filter').checked,
+          feed:{
+            url:el('new-feed-url').value.trim(), format:format,
+            productPath:format === 'xml' ? el('new-product-path').value.trim() : undefined,
+            delimiter:format === 'csv' ? el('new-delimiter').value : undefined,
+            fields:{
+              id:el('new-field-id').value.trim(), title:el('new-field-title').value.trim(),
+              imageUrl:el('new-field-image').value.trim(), price:el('new-field-price').value.trim(),
+              salePrice:el('new-field-sale').value.trim(), availability:el('new-field-availability').value.trim()
+            }
+          },
+          brand:{
+            primaryColor:el('new-primary-color').value,
+            accentColor:el('new-accent-color').value,
+            backgroundColor:el('new-background-color').value
+          }
+        };
+      }
+
+      function resetFeedAnalysis(message) {
+        feedAnalysisValid = false;
+        el('create-client').disabled = true;
+        el('feed-analysis').className = 'analysis-box';
+        el('feed-analysis').textContent = message || 'Po zmene nastavení otestuj feed znova.';
+      }
+
+      function fileAsBase64(file) {
+        return new Promise(function (resolve, reject) {
+          var reader = new FileReader();
+          reader.onload = function () { resolve(String(reader.result).split(',')[1]); };
+          reader.onerror = function () { reject(new Error('Logo sa nepodarilo načítať.')); };
+          reader.readAsDataURL(file);
+        });
+      }
+
+      async function analyzeNewClientFeed() {
+        if (!el('client-form').reportValidity()) return;
+        var button = el('analyze-feed');
+        button.disabled = true;
+        resetFeedAnalysis('Sťahujem a kontrolujem feed…');
+        el('feed-analysis').innerHTML = '<span class="spinner"></span>Sťahujem a kontrolujem feed…';
+        try {
+          var result = await apiRequest('/api/clients/analyze-feed', {
+            method:'POST', headers:{ 'content-type':'application/json', accept:'application/json' },
+            body:JSON.stringify(clientFormPayload())
+          });
+          var analysis = result.analysis;
+          feedAnalysisValid = analysis.validCount > 0 && analysis.eligibleCount > 0;
+          el('create-client').disabled = !feedAnalysisValid;
+          el('feed-analysis').className = 'analysis-box ' + (feedAnalysisValid ? 'ok' : 'err');
+          var sample = analysis.sample.length ? ' · ukážka SKU ' + analysis.sample.map(function (item) { return item.id; }).join(', ') : '';
+          el('feed-analysis').textContent = count(analysis.sourceCount) + ' položiek · ' + count(analysis.validCount) + ' platných · ' + count(analysis.eligibleCount) + ' po filtroch · ' + count(analysis.invalidCount) + ' neplatných' + sample;
+        } catch (error) {
+          el('feed-analysis').className = 'analysis-box err';
+          el('feed-analysis').textContent = error.message;
+        } finally { button.disabled = false; }
+      }
+
+      async function submitNewClient(event) {
+        event.preventDefault();
+        if (!feedAnalysisValid || !el('client-form').reportValidity()) return;
+        var button = el('create-client');
+        button.disabled = true;
+        el('analyze-feed').disabled = true;
+        el('feed-analysis').className = 'analysis-box';
+        el('feed-analysis').innerHTML = '<span class="spinner"></span>Vytváram klienta a ešte raz overujem feed…';
+        try {
+          var payload = clientFormPayload();
+          var logo = el('new-logo').files[0];
+          if (logo) payload.brand.logo = { data:await fileAsBase64(logo) };
+          await apiRequest('/api/clients', {
+            method:'POST', headers:{ 'content-type':'application/json', accept:'application/json' },
+            body:JSON.stringify(payload)
+          });
+          clients = (await api('/api/clients?refresh=1')).clients;
+          el('client-dialog').close();
+          await selectClient(payload.clientId);
+          showMessage('Klient ' + payload.name + ' bol vytvorený. Pred prvým publikovaním dolaď šablónu a skontroluj náhľad.');
+        } catch (error) {
+          el('feed-analysis').className = 'analysis-box err';
+          el('feed-analysis').textContent = error.message;
+          button.disabled = false;
+        } finally { el('analyze-feed').disabled = false; }
+      }
 
       function drawClients() {
         el('clients').innerHTML = clients.map(function (client) {
@@ -801,6 +951,30 @@
       el('refresh').addEventListener('click', function () {
         if (selectedId) selectClient(selectedId, true);
       });
+      el('add-client').addEventListener('click', function () {
+        el('client-form').reset();
+        clientIdEdited = false;
+        el('new-product-path-field').hidden = false;
+        el('new-delimiter-field').hidden = true;
+        resetFeedAnalysis('Najprv otestuj feed. Nič sa zatiaľ neuloží.');
+        el('client-dialog').showModal();
+      });
+      el('close-client-dialog').addEventListener('click', function () { el('client-dialog').close(); });
+      el('new-client-name').addEventListener('input', function () {
+        if (!clientIdEdited) el('new-client-id').value = slug(el('new-client-name').value);
+      });
+      el('new-client-id').addEventListener('input', function () { clientIdEdited = true; });
+      el('new-feed-format').addEventListener('change', function () {
+        var xml = el('new-feed-format').value === 'xml';
+        el('new-product-path-field').hidden = !xml;
+        el('new-delimiter-field').hidden = xml;
+      });
+      ['new-feed-url','new-feed-format','new-product-path','new-delimiter','new-field-id','new-field-title','new-field-image','new-field-price','new-field-sale','new-field-availability','new-availability-filter'].forEach(function (id) {
+        el(id).addEventListener('input', function () { resetFeedAnalysis(); });
+        el(id).addEventListener('change', function () { resetFeedAnalysis(); });
+      });
+      el('analyze-feed').addEventListener('click', analyzeNewClientFeed);
+      el('client-form').addEventListener('submit', submitNewClient);
       el('refresh-r2').addEventListener('click', function () { loadR2Usage(true); });
       el('sample-product').addEventListener('change', function () {
         selectedProduct = products.find(function (product) { return product.id === el('sample-product').value; });

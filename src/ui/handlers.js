@@ -5,6 +5,7 @@ import { PreviewQueue, renderDraftPreview } from "./preview-service.js";
 import { loadFeed } from "./feed-cache.js";
 import { getRenderJob, startRenderJob } from "./run-store.js";
 import { loadR2Usage } from "../storage/r2-usage.js";
+import { analyzeClientFeed, createClient } from "../config/create-client.js";
 
 const previewQueue = new PreviewQueue();
 
@@ -19,6 +20,25 @@ function json(body, status = 200) {
 export async function listClientsHandler(request) {
   const force = request.url.searchParams.get("refresh") === "1";
   return json({ clients: await getClients({ force }) });
+}
+
+export async function analyzeClientFeedHandler(request) {
+  if (!request.body || typeof request.body !== "object" || Array.isArray(request.body)) {
+    const error = new Error("Expected a JSON object.");
+    error.statusCode = 400;
+    throw error;
+  }
+  return json({ analysis: await analyzeClientFeed(request.body) });
+}
+
+export async function createClientHandler(request) {
+  if (!request.body || typeof request.body !== "object" || Array.isArray(request.body)) {
+    const error = new Error("Expected a JSON object.");
+    error.statusCode = 400;
+    throw error;
+  }
+  const result = await createClient(request.body);
+  return json(result, 201);
 }
 
 export async function clientHandler(request) {
