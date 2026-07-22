@@ -15,6 +15,7 @@ import {
   runsHandler,
   saveTemplateHandler,
   saveCatalogFiltersHandler,
+  saveClientAssetsHandler,
   startRenderHandler,
 } from "./handlers.js";
 
@@ -27,9 +28,10 @@ const productsPath = /^\/api\/client\/([a-z0-9][a-z0-9-]*)\/products$/;
 const filtersPath = /^\/api\/client\/([a-z0-9][a-z0-9-]*)\/filters$/;
 const previewPath = /^\/api\/client\/([a-z0-9][a-z0-9-]*)\/preview$/;
 const templatePath = /^\/api\/client\/([a-z0-9][a-z0-9-]*)\/template$/;
+const assetsPath = /^\/api\/client\/([a-z0-9][a-z0-9-]*)\/assets$/;
 const renderPath = /^\/api\/client\/([a-z0-9][a-z0-9-]*)\/render$/;
 const renderStatusPath = /^\/api\/client\/([a-z0-9][a-z0-9-]*)\/render\/status$/;
-const MAX_JSON_BYTES = 4 * 1024 * 1024;
+const MAX_JSON_BYTES = 12 * 1024 * 1024;
 
 function send(response, result) {
   response.writeHead(result.status, {
@@ -51,7 +53,7 @@ async function readJson(request) {
   for await (const chunk of request) {
     size += chunk.length;
     if (size > MAX_JSON_BYTES) {
-      const error = new Error("JSON body exceeds the 1 MB limit.");
+      const error = new Error("JSON body exceeds the 12 MB limit.");
       error.statusCode = 413;
       throw error;
     }
@@ -140,6 +142,16 @@ async function route(request, response) {
     send(response, await saveTemplateHandler({
       url,
       params: { id: templateMatch[1] },
+      body: await readJson(request),
+    }));
+    return;
+  }
+
+  const assetsMatch = url.pathname.match(assetsPath);
+  if (request.method === "POST" && assetsMatch) {
+    send(response, await saveClientAssetsHandler({
+      url,
+      params: { id: assetsMatch[1] },
       body: await readJson(request),
     }));
     return;

@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { mkdir, rename, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
+import satori from "satori";
 
 import { downloadFeed } from "../feed/download-feed.js";
 import { filterProducts } from "../feed/filter-products.js";
@@ -14,6 +15,7 @@ import { validateClientConfig } from "./validate-config.js";
 const CLIENT_ID = /^[a-z0-9][a-z0-9-]*$/;
 const HEX_COLOR = /^#[0-9a-f]{6}$/i;
 const MAX_LOGO_BYTES = 2 * 1024 * 1024;
+const MAX_FONT_BYTES = 3 * 1024 * 1024;
 
 function badRequest(message) {
   const error = new Error(message);
@@ -103,8 +105,8 @@ export function buildClientConfig({ clientId, name, feed, availabilityFilter = t
       primaryColor,
       accentColor,
       textColor: "#FFFFFF",
-      fontRegularPath: "assets/fonts/Poppins-Regular.ttf",
-      fontBoldPath: "assets/fonts/Poppins-Bold.ttf",
+      fontRegularPath: brand.fontRegularPath ?? "assets/fonts/Poppins-Regular.ttf",
+      fontBoldPath: brand.fontBoldPath ?? "assets/fonts/Poppins-Bold.ttf",
     },
     template: {
       backgroundColor: color(brand.backgroundColor, "#F7F5EF"),
@@ -164,7 +166,7 @@ function placeholderLogo(name) {
   return Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="800" height="220" viewBox="0 0 800 220"><rect width="800" height="220" rx="18" fill="#111111"/><text x="400" y="137" text-anchor="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="70" font-weight="700">${safeName}</text></svg>`);
 }
 
-async function renderLogo(logo, name) {
+export async function prepareClientLogo(logo, name) {
   const source = decodeLogo(logo) ?? placeholderLogo(name);
   try {
     return await sharp(source, { density: 240 })
@@ -174,6 +176,49 @@ async function renderLogo(logo, name) {
   } catch {
     throw badRequest("Logo is not a valid SVG, PNG, JPEG or WebP image.");
   }
+}
+
+function decodeFont(upload, label) {
+  if (!upload || typeof upload.data !== "string" || !upload.data) throw badRequest(`${label} font data is missing.`);
+  const data = Buffer.from(upload.data, "base64");
+  if (!data.length || data.length > MAX_FONT_BYTES) throw badRequest(`${label} font must be smaller than 3 MB.`);
+  const signature = data.subarray(0, 4).toString("latin1");
+  let extension;
+  if (data[0] === 0x00 && data[1] === 0x01 && data[2] === 0x00 && data[3] === 0x00) extension = ".ttf";
+  else if (signature === "true") extension = ".ttf";
+  else if (signature === "OTTO") extension = ".otf";
+  else if (signature === "wOFF") extension = ".woff";
+  else if (signature === "wOF2") throw badRequest(`${label} font is WOFF2, which is not supported. Use TTF, OTF or WOFF.`);
+  else throw badRequest(`${label} font is not a valid TTF, OTF or WOFF file.`);
+  return { data, extension };
+}
+
+export async function prepareClientFonts(brand) {
+  const hasRegular = Boolean(brand?.fontRegular);
+  const hasBold = Boolean(brand?.fontBold);
+  if (!hasRegular && !hasBold) return null;
+  if (!hasRegular || !hasBold) throw badRequest("Upload both Regular and Bold font files, or leave both empty to use Poppins.");
+  const regular = decodeFont(brand.fontRegular, "Regular");
+  const bold = decodeFont(brand.fontBold, "Bold");
+  try {
+    await satori({
+      type: "div",
+      props: {
+        style: { display: "flex", fontFamily: "ClientFont", fontSize: 24 },
+        children: "Cena 239,00 € · ĽŠČŤŽ",
+      },
+    }, {
+      width: 400,
+      height: 60,
+      fonts: [
+        { name: "ClientFont", data: regular.data, weight: 400, style: "normal" },
+        { name: "ClientFont", data: bold.data, weight: 700, style: "normal" },
+      ],
+    });
+  } catch (error) {
+    throw badRequest(`The uploaded fonts could not be loaded by the renderer: ${error.message}`);
+  }
+  return { regular, bold };
 }
 
 export async function createClient(input) {
@@ -190,13 +235,20 @@ export async function createClient(input) {
   const analysis = await analyzeClientFeed(input);
   if (!analysis.validCount) throw badRequest("The feed did not produce any valid products with the selected field mapping.");
   if (!analysis.eligibleCount) throw badRequest("No products passed the selected availability filter.");
-  const logo = await renderLogo(input.brand?.logo, name);
+  const logo = await prepareClientLogo(input.brand?.logo, name);
+  const fonts = await prepareClientFonts(input.brand);
+  const fontRegularName = fonts ? `font-regular${fonts.regular.extension}` : null;
+  const fontBoldName = fonts ? `font-bold${fonts.bold.extension}` : null;
   const config = buildClientConfig({
     clientId,
     name,
     feed: analysis.feed,
     availabilityFilter: input.availabilityFilter,
-    brand: input.brand,
+    brand: {
+      ...input.brand,
+      fontRegularPath: fonts ? `assets/clients/${clientId}/${fontRegularName}` : undefined,
+      fontBoldPath: fonts ? `assets/clients/${clientId}/${fontBoldName}` : undefined,
+    },
     storage: await sharedStorage(),
   });
   const errors = validateClientConfig(config, clientId);
@@ -207,14 +259,24 @@ export async function createClient(input) {
   const suffix = `.tmp-${process.pid}-${randomUUID()}`;
   const temporaryLogoPath = path.join(clientDirectory, `logo.png${suffix}`);
   const temporaryConfigPath = `${configPath}${suffix}`;
+  const fontFiles = fonts ? [
+    { temporaryPath: path.join(clientDirectory, `${fontRegularName}${suffix}`), finalPath: path.join(clientDirectory, fontRegularName), data: fonts.regular.data },
+    { temporaryPath: path.join(clientDirectory, `${fontBoldName}${suffix}`), finalPath: path.join(clientDirectory, fontBoldName), data: fonts.bold.data },
+  ] : [];
   await mkdir(clientDirectory, { recursive: true });
   try {
     await writeFile(temporaryLogoPath, logo, { flag: "wx" });
+    await Promise.all(fontFiles.map((font) => writeFile(font.temporaryPath, font.data, { flag: "wx" })));
     await writeFile(temporaryConfigPath, `${JSON.stringify(config, null, 2)}\n`, { flag: "wx" });
     await rename(temporaryLogoPath, path.join(clientDirectory, "logo.png"));
+    await Promise.all(fontFiles.map((font) => rename(font.temporaryPath, font.finalPath)));
     await rename(temporaryConfigPath, configPath);
   } catch (error) {
-    await Promise.allSettled([unlink(temporaryLogoPath), unlink(temporaryConfigPath)]);
+    await Promise.allSettled([
+      unlink(temporaryLogoPath),
+      unlink(temporaryConfigPath),
+      ...fontFiles.map((font) => unlink(font.temporaryPath)),
+    ]);
     throw error;
   }
   return { config, analysis };

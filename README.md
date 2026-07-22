@@ -37,6 +37,16 @@ samostatný súbor `clients/<id>.json`, logo v `assets/clients/<id>/`, lokálny 
 v `out/<id>/` a R2 prefix `<id>/`. Bucket a verejná R2 doména sa preberú z
 existujúcej konfigurácie; R2 prístupové kľúče zostávajú spoločné.
 
+Pri vytvorení klienta možno voliteľne nahrať vlastný font Regular a Bold vo
+formáte TTF, OTF alebo WOFF (WOFF2 renderer nepodporuje). Súbory sa uložia do
+`assets/clients/<id>/`, takže lokálny náhľad aj GitHub Actions používajú presne
+rovnakú typografiu. Ak sa fonty nenahrajú, použije sa spoločný Poppins.
+
+Logo aj fontový pár možno nahrať alebo vymeniť aj neskôr v záložke **Šablóna →
+Logo a fonty**. Nahratie aktualizuje klientsku konfiguráciu, zapne nové logo,
+zvýši `templateVersion` a obnoví živý náhľad. Cesty k assetom sa v bežnom editore
+nezobrazujú ako ručne editovateľné textové polia.
+
 Po založení klienta najprv skontroluj živý náhľad a až potom spusti prvé
 publikovanie. Aby nového klienta spracovával aj denný GitHub Action, jeho JSON a
 logo musia byť commitnuté a odoslané do repozitára. Workflow všetky konfigurácie

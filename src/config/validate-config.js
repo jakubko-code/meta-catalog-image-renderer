@@ -113,8 +113,7 @@ function validateFeed(feed, checks, errors) {
   }
 
   if (feed.format === "csv") {
-    checks.string(feed.delimiter, "feed.delimiter");
-    if (typeof feed.delimiter === "string" && [...feed.delimiter].length !== 1) {
+    if (typeof feed.delimiter !== "string" || [...feed.delimiter].length !== 1) {
       errors.push("feed.delimiter: expected exactly one character");
     }
     if ("productPath" in feed) errors.push("feed.productPath: only allowed for XML feeds");

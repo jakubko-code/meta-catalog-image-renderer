@@ -51,6 +51,7 @@ export class PreviewQueue {
 
 function assetKey(config) {
   return JSON.stringify({
+    templateVersion: config.templateVersion,
     logoPath: config.brand.logoPath,
     fontRegularPath: config.brand.fontRegularPath,
     fontBoldPath: config.brand.fontBoldPath,

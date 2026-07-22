@@ -1,0 +1,103 @@
+{
+  "clientId": "itzoo-cz",
+  "name": "ITzoo.cz",
+  "templateVersion": 3,
+  "feed": {
+    "url": "https://feedfiles.woolytech.com/itzoo-b76b.myshopify.com/HOB8anDDAc.tsv",
+    "format": "csv",
+    "fields": {
+      "id": "id",
+      "title": "title",
+      "imageUrl": "image_link",
+      "price": "price",
+      "salePrice": "sale_price",
+      "availability": "availability"
+    },
+    "delimiter": "\t"
+  },
+  "filters": {
+    "requireId": true,
+    "requireImage": true,
+    "rules": [
+      {
+        "field": "availability",
+        "operator": "in",
+        "value": [
+          "in_stock",
+          "preorder"
+        ]
+      },
+      {
+        "field": "source.product_type",
+        "operator": "categoryIn",
+        "value": [
+          "Telefon",
+          "Telefón"
+        ]
+      }
+    ]
+  },
+  "output": {
+    "width": 1080,
+    "height": 1080,
+    "format": "jpeg",
+    "quality": 90
+  },
+  "brand": {
+    "logoPath": "assets/clients/itzoo-cz/logo.png",
+    "primaryColor": "#58a6a0",
+    "accentColor": "#cb2d3e",
+    "textColor": "#FFFFFF",
+    "fontRegularPath": "assets/fonts/Poppins-Regular.ttf",
+    "fontBoldPath": "assets/fonts/Poppins-Bold.ttf"
+  },
+  "template": {
+    "backgroundColor": "#f7f5ef",
+    "padding": 48,
+    "productImage": {
+      "fit": "contain",
+      "heightPercent": 62
+    },
+    "logo": {
+      "show": true,
+      "position": "topLeft",
+      "maxWidth": 190
+    },
+    "price": {
+      "show": true,
+      "position": "bottomLeft",
+      "fontSize": 64,
+      "showOriginalPrice": true,
+      "saleLabel": "AKCIOVÁ CENA",
+      "regularLabel": "CENA",
+      "backgroundColor": "#111111",
+      "textColor": "#FFFFFF",
+      "originalPriceColor": "#58a6a0"
+    },
+    "discountBadge": {
+      "show": true,
+      "minimumPercent": 1,
+      "position": "topRight",
+      "text": "-{percent} %",
+      "backgroundColor": "#cb2d3e",
+      "textColor": "#FFFFFF"
+    },
+    "title": {
+      "show": true,
+      "fontSize": 30,
+      "maxCharacters": 72,
+      "textColor": "#111111"
+    }
+  },
+  "processing": {
+    "concurrency": 4
+  },
+  "storage": {
+    "bucket": "meta-catalog-images",
+    "publicBaseUrl": "https://pub-6f5db5933d754aaa989602bb3e31fdca.r2.dev",
+    "prefix": "itzoo-cz",
+    "imageKeyPrefix": "images",
+    "stateKey": "state.json",
+    "supplementaryFeedKey": "supplementary.csv"
+  }
+}

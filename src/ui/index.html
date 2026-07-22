@@ -167,6 +167,10 @@
     .selected-category span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
     .selected-category button { flex:none; width:18px; height:18px; border:0; border-radius:50%; padding:0; background:var(--accent-dim); color:#cce8e5; cursor:pointer; line-height:18px }
     .selected-category-empty { color:var(--faint); font-size:12px }
+    .asset-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px }
+    .asset-current { display:flex; flex-wrap:wrap; gap:8px 16px; margin-bottom:15px; padding-bottom:13px; border-bottom:1px solid var(--line-soft); color:var(--dim); font-size:11.5px }
+    .asset-current code { color:var(--accent); font:11px var(--mono) }
+    .asset-foot { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-top:14px }
     [hidden] { display:none !important }
     .spinner { display:inline-block; width:11px; height:11px; border:2px solid var(--line); border-top-color:var(--accent); border-radius:50%; animation:spin .7s linear infinite; vertical-align:-1px; margin-right:5px }
     @keyframes spin { to { transform:rotate(360deg) } }
@@ -184,6 +188,7 @@
       .form-grid,.mapping-grid { grid-template-columns:1fr }
       .field-wide,.section-title { grid-column:1 }
       .filter-toolbar,.filter-summary { grid-template-columns:1fr }
+      .asset-grid { grid-template-columns:1fr }
     }
     @media(min-width:761px) and (max-width:1100px) { .editor { grid-template-columns:1fr } .preview-dock { position:static; max-width:500px } }
     @media(prefers-reduced-motion:reduce) { .spinner { animation:none } }
@@ -260,6 +265,18 @@
         <section id="v-template" hidden>
           <div class="editor">
             <div>
+              <div class="card">
+                <div class="card-head"><div><h2>Logo a fonty</h2><div class="sub">Nahraj súbory priamo, bez ručného zadávania ciest</div></div></div>
+                <div class="card-body">
+                  <div class="asset-current"><span>Logo: <code id="current-logo-file">—</code></span><span>Regular: <code id="current-regular-font">—</code></span><span>Bold: <code id="current-bold-font">—</code></span></div>
+                  <div class="asset-grid">
+                    <div class="field"><label for="template-logo-upload">Nové logo</label><input id="template-logo-upload" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml"><div class="sub">PNG, JPEG, WebP alebo SVG · max. 2 MB</div></div>
+                    <div class="field"><label for="template-font-regular-upload">Nový font Regular</label><input id="template-font-regular-upload" type="file" accept=".ttf,.otf,.woff,font/ttf,font/otf,font/woff"><div class="sub">TTF, OTF alebo WOFF · max. 3 MB</div></div>
+                    <div class="field"><label for="template-font-bold-upload">Nový font Bold</label><input id="template-font-bold-upload" type="file" accept=".ttf,.otf,.woff,font/ttf,font/otf,font/woff"><div class="sub">Regular a Bold sa nahrávajú spolu</div></div>
+                  </div>
+                  <div class="asset-foot"><span class="save-note" id="asset-upload-note">Nahratie zvýši verziu šablóny a obnoví živý náhľad.</span><button class="btn" id="upload-client-assets" type="button" disabled>Nahrať súbory</button></div>
+                </div>
+              </div>
               <div class="card sample-card">
                 <div class="card-head"><h2>Ukážkový produkt</h2></div>
                 <div class="card-body">
@@ -425,6 +442,10 @@
           <span class="micro section-title">Základ brandingu</span>
           <div class="field"><label for="new-logo">Logo, maximálne 2 MB</label><input id="new-logo" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml"><div class="sub">Ak ho nepridáš, logo bude v šablóne vypnuté.</div></div>
           <div class="field"><span class="field-label">Farby</span><div class="color-row"><input id="new-primary-color" type="color" value="#58a6a0" title="Primárna farba"><input id="new-accent-color" type="color" value="#cb2d3e" title="Farba zľavy"><input id="new-background-color" type="color" value="#f7f5ef" title="Pozadie"></div></div>
+
+          <span class="micro section-title">Typografia</span>
+          <div class="field"><label for="new-font-regular">Font Regular, maximálne 3 MB</label><input id="new-font-regular" type="file" accept=".ttf,.otf,.woff,font/ttf,font/otf,font/woff"><div class="sub">TTF, OTF alebo WOFF. Bez uploadu sa použije Poppins.</div></div>
+          <div class="field"><label for="new-font-bold">Font Bold, maximálne 3 MB</label><input id="new-font-bold" type="file" accept=".ttf,.otf,.woff,font/ttf,font/otf,font/woff"><div class="sub">Nahraj Regular aj Bold z rovnakej rodiny. Fonty môžeš stiahnuť z <a href="https://fonts.google.com/" target="_blank" rel="noopener" style="color:var(--accent)">Google Fonts</a>.</div></div>
           <div class="field field-wide"><div class="analysis-box" id="feed-analysis">Najprv otestuj feed. Nič sa zatiaľ neuloží.</div></div>
         </div>
       </div>
@@ -559,7 +580,7 @@
         return new Promise(function (resolve, reject) {
           var reader = new FileReader();
           reader.onload = function () { resolve(String(reader.result).split(',')[1]); };
-          reader.onerror = function () { reject(new Error('Logo sa nepodarilo načítať.')); };
+          reader.onerror = function () { reject(new Error('Súbor sa nepodarilo načítať.')); };
           reader.readAsDataURL(file);
         });
       }
@@ -599,6 +620,13 @@
           var payload = clientFormPayload();
           var logo = el('new-logo').files[0];
           if (logo) payload.brand.logo = { data:await fileAsBase64(logo) };
+          var regularFont = el('new-font-regular').files[0];
+          var boldFont = el('new-font-bold').files[0];
+          if (Boolean(regularFont) !== Boolean(boldFont)) throw new Error('Nahraj font Regular aj Bold, alebo nechaj obe polia prázdne pre Poppins.');
+          if (regularFont && boldFont) {
+            payload.brand.fontRegular = { name:regularFont.name, data:await fileAsBase64(regularFont) };
+            payload.brand.fontBold = { name:boldFont.name, data:await fileAsBase64(boldFont) };
+          }
           await apiRequest('/api/clients', {
             method:'POST', headers:{ 'content-type':'application/json', accept:'application/json' },
             body:JSON.stringify(payload)
@@ -915,6 +943,68 @@
         return find(currentClient.editorSchema);
       }
 
+      function fileName(path) {
+        return String(path || '—').split('/').pop();
+      }
+
+      function drawAssetSummary() {
+        if (!currentClient) return;
+        el('current-logo-file').textContent = fileName(currentClient.config.brand.logoPath);
+        el('current-regular-font').textContent = fileName(currentClient.config.brand.fontRegularPath);
+        el('current-bold-font').textContent = fileName(currentClient.config.brand.fontBoldPath);
+      }
+
+      function updateAssetUploadButton() {
+        var logo = el('template-logo-upload').files[0];
+        var regular = el('template-font-regular-upload').files[0];
+        var bold = el('template-font-bold-upload').files[0];
+        var mismatchedFonts = Boolean(regular) !== Boolean(bold);
+        el('upload-client-assets').disabled = mismatchedFonts || (!logo && !regular && !bold);
+        el('asset-upload-note').textContent = mismatchedFonts
+          ? 'Vyber font Regular aj Bold z rovnakej rodiny.'
+          : 'Nahratie zvýši verziu šablóny a obnoví živý náhľad.';
+      }
+
+      async function uploadClientAssets() {
+        var button = el('upload-client-assets');
+        var logo = el('template-logo-upload').files[0];
+        var regular = el('template-font-regular-upload').files[0];
+        var bold = el('template-font-bold-upload').files[0];
+        if (!logo && !regular && !bold) return;
+        button.disabled = true;
+        clearError();
+        el('asset-upload-note').innerHTML = '<span class="spinner"></span>Overujem a ukladám súbory…';
+        try {
+          var payload = {};
+          if (logo) payload.logo = { name:logo.name, data:await fileAsBase64(logo) };
+          if (regular && bold) {
+            payload.fontRegular = { name:regular.name, data:await fileAsBase64(regular) };
+            payload.fontBold = { name:bold.name, data:await fileAsBase64(bold) };
+          }
+          var result = await apiRequest('/api/client/' + encodeURIComponent(selectedId) + '/assets', {
+            method:'POST', headers:{ 'content-type':'application/json', accept:'application/json' },
+            body:JSON.stringify(payload)
+          });
+          currentClient.config = result.config;
+          currentClient.templateVersion = result.templateVersion;
+          currentClient.editorSchema = result.editorSchema;
+          draft.brand.logoPath = result.config.brand.logoPath;
+          draft.brand.fontRegularPath = result.config.brand.fontRegularPath;
+          draft.brand.fontBoldPath = result.config.brand.fontBoldPath;
+          if (logo) draft.template.logo.show = true;
+          el('template-version').textContent = count(result.templateVersion);
+          el('template-logo-upload').value = '';
+          el('template-font-regular-upload').value = '';
+          el('template-font-bold-upload').value = '';
+          drawEditor();
+          schedulePreview(true);
+          showMessage('Logo a fonty boli uložené. Šablóna má verziu ' + result.templateVersion + ' a na prerenderovanie je pripravených približne ' + count(result.estimatedRerenderCount) + ' SKU.');
+        } catch (error) {
+          showError(error);
+          el('asset-upload-note').textContent = error.message;
+        } finally { updateAssetUploadButton(); }
+      }
+
       function drawEditor() {
         if (!currentClient || !draft) return;
         el('editor-fields').innerHTML = currentClient.editorSchema.map(function (section) {
@@ -922,6 +1012,7 @@
             '<div class="card-body">' + section.fields.map(renderField).join('') + '</div></div>';
         }).join('');
         bindEditorInputs();
+        drawAssetSummary();
         el('preview-format').textContent = currentClient.config.output.width + ' × ' + currentClient.config.output.height + ' · JPEG q' + currentClient.config.output.quality;
         el('save-template').textContent = 'Uložiť ako v' + (currentClient.templateVersion + 1);
         el('save-note').textContent = 'Uloženie zvýši verziu šablóny a označí približne ' + count(currentClient.feed.eligibleCount) + ' SKU na prerenderovanie.';
@@ -1194,6 +1285,10 @@
       el('analyze-feed').addEventListener('click', analyzeNewClientFeed);
       el('client-form').addEventListener('submit', submitNewClient);
       el('refresh-r2').addEventListener('click', function () { loadR2Usage(true); });
+      ['template-logo-upload','template-font-regular-upload','template-font-bold-upload'].forEach(function (id) {
+        el(id).addEventListener('change', updateAssetUploadButton);
+      });
+      el('upload-client-assets').addEventListener('click', uploadClientAssets);
       el('catalog-filter-enabled').addEventListener('change', function () {
         catalogFilterEnabled = el('catalog-filter-enabled').checked;
         drawCatalogFilters();

@@ -50,8 +50,11 @@ function describeObject(value, path) {
 }
 
 export function createEditorSchema(config) {
+  const editableBrand = Object.fromEntries(Object.entries(config.brand).filter(([key]) => (
+    !["logoPath", "fontRegularPath", "fontBoldPath"].includes(key)
+  )));
   return [
-    { kind: "section", key: "brand", label: "Branding", fields: describeObject(config.brand, "brand") },
+    { kind: "section", key: "brand", label: "Branding", fields: describeObject(editableBrand, "brand") },
     { kind: "section", key: "template", label: "Šablóna", fields: describeObject(config.template, "template") },
   ];
 }

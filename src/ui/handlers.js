@@ -7,6 +7,7 @@ import { getRenderJob, startRenderJob } from "./run-store.js";
 import { loadR2Usage } from "../storage/r2-usage.js";
 import { analyzeClientFeed, createClient } from "../config/create-client.js";
 import { getCatalogFilterOptions, updateCatalogFilter } from "./filter-service.js";
+import { saveClientAssets } from "../config/save-client-assets.js";
 
 const previewQueue = new PreviewQueue();
 
@@ -127,6 +128,22 @@ export async function saveTemplateHandler(request) {
     template: request.body.template,
     brand: request.body.brand,
   });
+  const feed = await loadFeed(config);
+  return json({
+    config,
+    editorSchema: createEditorSchema(config),
+    templateVersion: config.templateVersion,
+    estimatedRerenderCount: feed.eligibleCount,
+  });
+}
+
+export async function saveClientAssetsHandler(request) {
+  if (!request.body || typeof request.body !== "object" || Array.isArray(request.body)) {
+    const error = new Error("Expected a JSON object.");
+    error.statusCode = 400;
+    throw error;
+  }
+  const config = await saveClientAssets(request.params.id, request.body);
   const feed = await loadFeed(config);
   return json({
     config,
