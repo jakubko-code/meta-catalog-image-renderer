@@ -61,3 +61,22 @@ export async function saveClientTemplate(clientId, { template, brand }) {
   await rename(temporaryPath, configPath);
   return next;
 }
+
+export async function saveClientCatalogFilter(clientId, { field, values }) {
+  const current = await loadClientConfig(clientId);
+  const rules = current.filters.rules.filter((rule) => rule.operator !== "categoryIn");
+  if (values.length > 0) rules.push({ field, operator: "categoryIn", value: values });
+  const next = { ...current, filters: { ...current.filters, rules } };
+  const errors = validateClientConfig(next, clientId);
+  if (errors.length > 0) {
+    const error = new Error(errors.join("; "));
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const configPath = path.join(PROJECT_ROOT, "clients", `${clientId}.json`);
+  const temporaryPath = `${configPath}.tmp-${process.pid}-${randomUUID()}`;
+  await writeFile(temporaryPath, `${JSON.stringify(next, null, 2)}\n`, "utf8");
+  await rename(temporaryPath, configPath);
+  return next;
+}

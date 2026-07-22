@@ -17,6 +17,10 @@ function matches(value, operator, expected) {
   if (operator === "contains") {
     return Array.isArray(value) ? value.includes(expected) : String(value ?? "").includes(String(expected));
   }
+  if (operator === "categoryIn") {
+    const category = String(value?.["#text"] ?? value ?? "").trim();
+    return expected.some((selected) => category === selected || category.startsWith(`${selected} > `));
+  }
   return false;
 }
 

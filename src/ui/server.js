@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import {
   analyzeClientFeedHandler,
+  catalogFiltersHandler,
   clientHandler,
   createClientHandler,
   errorResponse,
@@ -13,6 +14,7 @@ import {
   renderStatusHandler,
   runsHandler,
   saveTemplateHandler,
+  saveCatalogFiltersHandler,
   startRenderHandler,
 } from "./handlers.js";
 
@@ -22,6 +24,7 @@ const htmlPath = fileURLToPath(new URL("./index.html", import.meta.url));
 const clientPath = /^\/api\/client\/([a-z0-9][a-z0-9-]*)$/;
 const runsPath = /^\/api\/client\/([a-z0-9][a-z0-9-]*)\/runs$/;
 const productsPath = /^\/api\/client\/([a-z0-9][a-z0-9-]*)\/products$/;
+const filtersPath = /^\/api\/client\/([a-z0-9][a-z0-9-]*)\/filters$/;
 const previewPath = /^\/api\/client\/([a-z0-9][a-z0-9-]*)\/preview$/;
 const templatePath = /^\/api\/client\/([a-z0-9][a-z0-9-]*)\/template$/;
 const renderPath = /^\/api\/client\/([a-z0-9][a-z0-9-]*)\/render$/;
@@ -104,6 +107,21 @@ async function route(request, response) {
   const productsMatch = url.pathname.match(productsPath);
   if (request.method === "GET" && productsMatch) {
     send(response, await productsHandler({ url, params: { id: productsMatch[1] } }));
+    return;
+  }
+
+  const filtersMatch = url.pathname.match(filtersPath);
+  if (request.method === "GET" && filtersMatch) {
+    send(response, await catalogFiltersHandler({ url, params: { id: filtersMatch[1] } }));
+    return;
+  }
+
+  if (request.method === "PUT" && filtersMatch) {
+    send(response, await saveCatalogFiltersHandler({
+      url,
+      params: { id: filtersMatch[1] },
+      body: await readJson(request),
+    }));
     return;
   }
 

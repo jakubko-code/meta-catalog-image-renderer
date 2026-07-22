@@ -14,7 +14,7 @@ const ROOT_KEYS = [
   "storage",
 ];
 
-const FILTER_OPERATORS = ["eq", "neq", "in", "notIn", "exists", "contains"];
+const FILTER_OPERATORS = ["eq", "neq", "in", "notIn", "exists", "contains", "categoryIn"];
 const HEX_COLOR = /^#[0-9a-f]{6}$/i;
 
 function isObject(value) {
@@ -146,7 +146,7 @@ function validateFilters(filters, checks, errors) {
 
     if (!("value" in rule)) {
       errors.push(`${field}.value: field is required`);
-    } else if (["in", "notIn"].includes(rule.operator) && (!Array.isArray(rule.value) || rule.value.length === 0)) {
+    } else if (["in", "notIn", "categoryIn"].includes(rule.operator) && (!Array.isArray(rule.value) || rule.value.length === 0)) {
       errors.push(`${field}.value: expected a non-empty array for operator ${rule.operator}`);
     } else if (rule.operator === "exists" && typeof rule.value !== "boolean") {
       errors.push(`${field}.value: expected boolean for operator exists`);

@@ -15,7 +15,7 @@ async function loadValidConfig(clientId) {
   return config;
 }
 
-async function readStateSummary(clientId) {
+async function readStateSummary(clientId, eligibleProducts) {
   const statePath = resolveProjectPath(`out/${clientId}/state.json`);
   const state = await loadLocalState(statePath, clientId);
   let updatedAt = null;
@@ -24,16 +24,20 @@ async function readStateSummary(clientId) {
   } catch (error) {
     if (error.code !== "ENOENT") throw error;
   }
-  return { renderedCount: Object.keys(state.products).length, updatedAt };
+  return {
+    renderedCount: eligibleProducts.filter((product) => state.products[product.id]).length,
+    storedCount: Object.keys(state.products).length,
+    updatedAt,
+  };
 }
 
 export async function getClientOverview(clientId, { force = false } = {}) {
   const config = await loadValidConfig(clientId);
-  const [feed, state, runs] = await Promise.all([
+  const [feed, runs] = await Promise.all([
     loadFeed(config, { force }),
-    readStateSummary(clientId),
     loadRuns(clientId),
   ]);
+  const state = await readStateSummary(clientId, feed.products);
   const lastRun = runs.at(0) ?? null;
 
   return {

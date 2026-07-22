@@ -23,6 +23,7 @@ export async function loadFeed(config, { force = false, ttlMs = DEFAULT_TTL_MS }
     filteredCount: normalized.products.length - products.length,
     invalidCount: normalized.errors.length,
     errors: normalized.errors,
+    allProducts: normalized.products,
     products,
     loadedAt: new Date(now).toISOString(),
   };

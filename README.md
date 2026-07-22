@@ -23,6 +23,12 @@ zatvorení karty, kým zostane spustený Node server.
 Záložka Produkty načítava verejné R2 obrázky po 60 položkách. Podporuje
 vyhľadávanie podľa SKU alebo názvu a filtre pre zľavy, dnešné zmeny a chyby.
 
+Záložka **Filtre** umožňuje obmedziť renderovanie a supplementary feed na vybrané
+kategórie. Pole kategórie sa vyberá z reálnych polí feedu. Výber nadradenej
+kategórie zahŕňa aj všetky hodnoty pod ňou oddelené znakom `>`; viac vybraných
+vetiev používa OR logiku. Filter dostupnosti a povinný obrázok zostávajú zachované.
+Po zmene filtra treba spustiť publikovanie, aby sa nový výber zapísal do R2 feedu.
+
 ### Viacerí klienti
 
 V ľavom paneli zvoľ **Pridať klienta**. Formulár pred uložením stiahne a overí

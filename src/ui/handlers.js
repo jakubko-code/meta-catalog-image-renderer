@@ -6,6 +6,7 @@ import { loadFeed } from "./feed-cache.js";
 import { getRenderJob, startRenderJob } from "./run-store.js";
 import { loadR2Usage } from "../storage/r2-usage.js";
 import { analyzeClientFeed, createClient } from "../config/create-client.js";
+import { getCatalogFilterOptions, updateCatalogFilter } from "./filter-service.js";
 
 const previewQueue = new PreviewQueue();
 
@@ -80,6 +81,27 @@ export async function productsHandler(request) {
     category: categoryQuery(request.url),
   };
   return json(await getProducts(request.params.id, options));
+}
+
+export async function catalogFiltersHandler(request) {
+  const client = await getClient(request.params.id);
+  return json({ filters: await getCatalogFilterOptions(client.config) });
+}
+
+export async function saveCatalogFiltersHandler(request) {
+  if (!request.body || typeof request.body !== "object" || Array.isArray(request.body)) {
+    const error = new Error("Expected a JSON object.");
+    error.statusCode = 400;
+    throw error;
+  }
+  const client = await getClient(request.params.id);
+  const config = await updateCatalogFilter(client.config, request.body);
+  const updatedClient = await getClient(request.params.id, { force: true });
+  return json({
+    config,
+    client: updatedClient,
+    filters: await getCatalogFilterOptions(config),
+  });
 }
 
 export async function previewHandler(request) {

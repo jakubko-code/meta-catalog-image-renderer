@@ -26,6 +26,14 @@
           "in_stock",
           "preorder"
         ]
+      },
+      {
+        "field": "source.g:product_type",
+        "operator": "categoryIn",
+        "value": [
+          "SEDACIE SÚPRAVY - SEDAČKY > KUCHYŇA > SADY HRNCOV DO KUCHYNE",
+          "SEDACIE SÚPRAVY - SEDAČKY > KUCHYŇA > HRNCE"
+        ]
       }
     ]
   },
