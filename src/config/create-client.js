@@ -109,6 +109,8 @@ export function buildClientConfig({ clientId, name, feed, availabilityFilter = t
       fontBoldPath: brand.fontBoldPath ?? "assets/fonts/Poppins-Bold.ttf",
     },
     template: {
+      layout: "classic",
+      theme: { primaryColor },
       backgroundColor: color(brand.backgroundColor, "#F7F5EF"),
       padding: 48,
       productImage: { fit: "contain", heightPercent: 62 },

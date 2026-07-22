@@ -52,6 +52,10 @@
     "fontBoldPath": "assets/fonts/Poppins-Bold.ttf"
   },
   "template": {
+    "layout": "classic",
+    "theme": {
+      "primaryColor": "#D9AF42"
+    },
     "backgroundColor": "#F7F5EF",
     "padding": 48,
     "productImage": {

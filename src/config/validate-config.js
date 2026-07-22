@@ -10,6 +10,8 @@ const ROOT_KEYS = [
   "output",
   "brand",
   "template",
+  "templateVariants",
+  "templateRules",
   "processing",
   "storage",
 ];
@@ -183,6 +185,8 @@ function validateBrand(brand, checks) {
 function validateTemplate(template, checks, errors) {
   if (!checks.object(template, "template")) return;
   checks.knownKeys(template, "template", [
+    "layout",
+    "theme",
     "backgroundColor",
     "padding",
     "productImage",
@@ -191,6 +195,11 @@ function validateTemplate(template, checks, errors) {
     "discountBadge",
     "title",
   ]);
+  checks.string(template.layout, "template.layout", { allowed: EDITOR_FIELD_OPTIONS["template.layout"].options });
+  if (checks.object(template.theme, "template.theme")) {
+    checks.knownKeys(template.theme, "template.theme", ["primaryColor"]);
+    checks.string(template.theme.primaryColor, "template.theme.primaryColor", { pattern: HEX_COLOR });
+  }
   checks.string(template.backgroundColor, "template.backgroundColor", { pattern: HEX_COLOR });
   checks.integer(
     template.padding,
@@ -294,6 +303,60 @@ function validateTemplate(template, checks, errors) {
   }
 }
 
+function validateTemplateCollection(config, checks, errors) {
+  const variants = config.templateVariants ?? [];
+  const rules = config.templateRules ?? [];
+  if (!Array.isArray(variants)) {
+    errors.push(`templateVariants: expected array, received ${valueType(variants)}`);
+    return;
+  }
+  if (!Array.isArray(rules)) {
+    errors.push(`templateRules: expected array, received ${valueType(rules)}`);
+    return;
+  }
+
+  const variantIds = new Set();
+  variants.forEach((variant, index) => {
+    const field = `templateVariants[${index}]`;
+    if (!checks.object(variant, field)) return;
+    checks.knownKeys(variant, field, ["id", "name", "template"]);
+    checks.string(variant.id, `${field}.id`, { pattern: /^[a-z0-9][a-z0-9-]*$/ });
+    checks.string(variant.name, `${field}.name`);
+    if (variant.id === "default") errors.push(`${field}.id: default is reserved`);
+    if (variantIds.has(variant.id)) errors.push(`${field}.id: duplicate template ID`);
+    variantIds.add(variant.id);
+    validateTemplate(variant.template, checks, errors);
+  });
+
+  const ruleIds = new Set();
+  rules.forEach((rule, index) => {
+    const field = `templateRules[${index}]`;
+    if (!checks.object(rule, field)) return;
+    checks.knownKeys(rule, field, ["id", "name", "templateId", "conditions"]);
+    checks.string(rule.id, `${field}.id`, { pattern: /^[a-z0-9][a-z0-9-]*$/ });
+    checks.string(rule.name, `${field}.name`);
+    checks.string(rule.templateId, `${field}.templateId`);
+    if (ruleIds.has(rule.id)) errors.push(`${field}.id: duplicate rule ID`);
+    ruleIds.add(rule.id);
+    if (!variantIds.has(rule.templateId)) errors.push(`${field}.templateId: unknown template ${JSON.stringify(rule.templateId)}`);
+    if (!Array.isArray(rule.conditions) || rule.conditions.length === 0) {
+      errors.push(`${field}.conditions: expected a non-empty array`);
+      return;
+    }
+    rule.conditions.forEach((condition, conditionIndex) => {
+      const conditionField = `${field}.conditions[${conditionIndex}]`;
+      if (!checks.object(condition, conditionField)) return;
+      checks.knownKeys(condition, conditionField, ["field", "operator", "value"]);
+      checks.string(condition.field, `${conditionField}.field`);
+      checks.string(condition.operator, `${conditionField}.operator`, { allowed: ["eq", "neq", "gte", "lte", "contains", "categoryIn"] });
+      if (!("value" in condition)) errors.push(`${conditionField}.value: field is required`);
+      if (condition.operator === "categoryIn" && (!Array.isArray(condition.value) || condition.value.length === 0)) {
+        errors.push(`${conditionField}.value: expected a non-empty array`);
+      }
+    });
+  });
+}
+
 function validateStorage(storage, checks, errors) {
   if (!checks.object(storage, "storage")) return;
   checks.knownKeys(storage, "storage", [
@@ -341,6 +404,7 @@ export function validateClientConfig(config, expectedClientId) {
   validateOutput(config.output, checks);
   validateBrand(config.brand, checks);
   validateTemplate(config.template, checks, errors);
+  validateTemplateCollection(config, checks, errors);
   validateProcessing(config.processing, checks);
   validateStorage(config.storage, checks, errors);
 

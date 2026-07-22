@@ -6,13 +6,15 @@ import satori from "satori";
 import { createProductTemplate } from "./product-template.js";
 import { loadRenderAssets } from "./load-assets.js";
 import { prepareSourceImage } from "./prepare-source-image.js";
+import { resolveProductTemplate } from "./template-resolver.js";
 
-export async function renderProduct(product, config, providedAssets) {
+export async function renderProduct(product, config, providedAssets, templateOverride) {
   const [assets, productImage] = await Promise.all([
     providedAssets ?? loadRenderAssets(config),
     prepareSourceImage(product.imageUrl),
   ]);
-  const tree = createProductTemplate(product, config, assets, productImage);
+  const selectedTemplate = templateOverride ?? resolveProductTemplate(product, config).template;
+  const tree = createProductTemplate(product, { ...config, template: selectedTemplate }, assets, productImage);
   const svg = await satori(tree, {
     width: config.output.width,
     height: config.output.height,

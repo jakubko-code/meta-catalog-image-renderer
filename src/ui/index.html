@@ -174,6 +174,22 @@
     .asset-current { display:flex; flex-wrap:wrap; gap:8px 16px; margin-bottom:15px; padding-bottom:13px; border-bottom:1px solid var(--line-soft); color:var(--dim); font-size:11.5px }
     .asset-current code { color:var(--accent); font:11px var(--mono) }
     .asset-foot { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-top:14px }
+    .template-toolbar { display:grid; grid-template-columns:minmax(180px,1fr) auto auto; gap:9px; align-items:end }
+    .layout-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:9px; margin-top:14px }
+    .layout-option { min-height:74px; border:1px solid var(--line); border-radius:7px; background:var(--bg); padding:10px; cursor:pointer; text-align:left }
+    .layout-option:hover { border-color:#3c424c }
+    .layout-option[aria-pressed=true] { border-color:var(--accent); background:#1a2626 }
+    .layout-option strong,.layout-option span { display:block }
+    .layout-option span { margin-top:4px; color:var(--faint); font-size:11px }
+    .rule-builder { display:grid; grid-template-columns:minmax(130px,.7fr) minmax(180px,1fr) minmax(180px,1.25fr) auto; gap:9px; align-items:end }
+    .rule-list { margin-top:14px; border:1px solid var(--line); border-radius:7px; overflow:hidden }
+    .rule-row { display:flex; align-items:center; gap:10px; padding:10px 11px; border-bottom:1px solid var(--line-soft); background:var(--bg) }
+    .rule-row:last-child { border-bottom:0 }
+    .rule-index { flex:none; color:var(--faint); font:11px var(--mono) }
+    .rule-copy { flex:1; min-width:0 }
+    .rule-copy strong,.rule-copy span { display:block }
+    .rule-copy span { color:var(--faint); font-size:11px }
+    .rule-row button { flex:none; border:0; background:none; color:var(--dim); cursor:pointer }
     [hidden] { display:none !important }
     .spinner { display:inline-block; width:11px; height:11px; border:2px solid var(--line); border-top-color:var(--accent); border-radius:50%; animation:spin .7s linear infinite; vertical-align:-1px; margin-right:5px }
     @keyframes spin { to { transform:rotate(360deg) } }
@@ -192,6 +208,7 @@
       .field-wide,.section-title { grid-column:1 }
       .filter-toolbar,.filter-summary { grid-template-columns:1fr }
       .asset-grid { grid-template-columns:1fr }
+      .template-toolbar,.rule-builder,.layout-grid { grid-template-columns:1fr }
     }
     @media(min-width:761px) and (max-width:1100px) { .editor { grid-template-columns:1fr } .preview-dock { position:static; max-width:500px } }
     @media(prefers-reduced-motion:reduce) { .spinner { animation:none } }
@@ -268,6 +285,36 @@
         <section id="v-template" hidden>
           <div class="editor">
             <div>
+              <div class="card">
+                <div class="card-head"><div><h2>Šablóny klienta</h2><div class="sub">Predvolená šablóna sa použije, ak produktu nevyhovuje žiadne pravidlo</div></div><span class="tag" id="template-count">1 šablóna</span></div>
+                <div class="card-body">
+                  <div class="template-toolbar">
+                    <div class="field"><label for="template-slot">Upravovaná šablóna</label><select id="template-slot"></select></div>
+                    <button class="btn" id="duplicate-template" type="button">Duplikovať</button>
+                    <button class="btn" id="delete-template" type="button" disabled>Odstrániť</button>
+                  </div>
+                  <span class="micro">Rozloženie</span>
+                  <div class="layout-grid" id="layout-gallery">
+                    <button class="layout-option" data-layout="classic" type="button"><strong>Klasická</strong><span>Univerzálne rozloženie</span></button>
+                    <button class="layout-option" data-layout="split" type="button"><strong>Rozdelená</strong><span>Produkt vľavo, informácie vpravo</span></button>
+                    <button class="layout-option" data-layout="bottomBanner" type="button"><strong>Spodný pás</strong><span>Veľký produkt a výrazná cena</span></button>
+                    <button class="layout-option" data-layout="minimal" type="button"><strong>Minimalistická</strong><span>Čisté pozadie bez rámu</span></button>
+                  </div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-head"><div><h2>Pravidlá použitia</h2><div class="sub">Pravidlo vyberie šablónu a zaradí zodpovedajúce produkty aj mimo výberu v záložke Filtre</div></div><span class="tag" id="template-rule-estimate">Počítam…</span></div>
+                <div class="card-body">
+                  <div class="rule-builder">
+                    <div class="field"><label for="rule-kind">Podmienka</label><select id="rule-kind"><option value="discount">Zľava najmenej</option><option value="category">Kategória</option></select></div>
+                    <div class="field" id="rule-discount-wrap"><label for="rule-discount">Minimálna zľava</label><input id="rule-discount" type="number" min="1" max="99" value="1"></div>
+                    <div class="field" id="rule-category-wrap" hidden><label for="rule-category">Kategória</label><select id="rule-category"><option value="">Načítavam kategórie…</option></select></div>
+                    <div class="field"><label for="rule-template">Použiť šablónu</label><select id="rule-template"></select></div>
+                    <button class="btn" id="add-template-rule" type="button">Pridať pravidlo</button>
+                  </div>
+                  <div class="rule-list" id="template-rules"><div class="empty">Zatiaľ bez pravidiel.</div></div>
+                </div>
+              </div>
               <div class="card">
                 <div class="card-head"><div><h2>Logo a fonty</h2><div class="sub">Nahraj súbory priamo, bez ručného zadávania ciest</div></div></div>
                 <div class="card-body">
@@ -486,6 +533,9 @@
       var catalogFilterEnabled = false;
       var catalogFiltersClientId = null;
       var templateSaving = false;
+      var activeTemplateId = 'default';
+      var templateEstimate = null;
+      var templateEstimateTimer = null;
       var number = new Intl.NumberFormat('sk-SK');
       var date = new Intl.DateTimeFormat('sk-SK', { dateStyle:'short', timeStyle:'short' });
 
@@ -510,10 +560,21 @@
       }
       function api(path) { return apiRequest(path); }
       function clone(value) { return JSON.parse(JSON.stringify(value)); }
+      function activeTemplateSettings() {
+        if (!draft || activeTemplateId === 'default') return draft && draft.template;
+        var variant = draft.templateVariants.find(function (item) { return item.id === activeTemplateId; });
+        return variant ? variant.template : draft.template;
+      }
       function valueAt(object, path) {
+        if (object === draft && path.indexOf('template.') === 0 && activeTemplateId !== 'default') {
+          object = { template:activeTemplateSettings() };
+        }
         return path.split('.').reduce(function (value, key) { return value && value[key]; }, object);
       }
       function setValueAt(object, path, value) {
+        if (object === draft && path.indexOf('template.') === 0 && activeTemplateId !== 'default') {
+          object = { template:activeTemplateSettings() };
+        }
         var keys = path.split('.');
         var target = object;
         keys.slice(0, -1).forEach(function (key) { target = target[key]; });
@@ -921,8 +982,110 @@
         if (!currentClient || !draft) return false;
         return JSON.stringify(draft) !== JSON.stringify({
           brand:currentClient.config.brand,
-          template:currentClient.config.template
+          template:currentClient.config.template,
+          templateVariants:currentClient.config.templateVariants || [],
+          templateRules:currentClient.config.templateRules || []
         });
+      }
+
+      function drawTemplateStudio() {
+        if (!draft) return;
+        var templates = [{ id:'default', name:'Predvolená' }].concat(draft.templateVariants);
+        if (!templates.some(function (item) { return item.id === activeTemplateId; })) activeTemplateId = 'default';
+        el('template-slot').innerHTML = templates.map(function (item) {
+          return '<option value="' + escapeHtml(item.id) + '"' + (item.id === activeTemplateId ? ' selected' : '') + '>' + escapeHtml(item.name) + '</option>';
+        }).join('');
+        el('rule-template').innerHTML = draft.templateVariants.length
+          ? draft.templateVariants.map(function (item) { return '<option value="' + escapeHtml(item.id) + '">' + escapeHtml(item.name) + '</option>'; }).join('')
+          : '<option value="">Najprv duplikuj šablónu</option>';
+        el('rule-template').disabled = !draft.templateVariants.length;
+        el('add-template-rule').disabled = !draft.templateVariants.length;
+        el('delete-template').disabled = activeTemplateId === 'default';
+        el('template-count').textContent = count(templates.length) + (templates.length === 1 ? ' šablóna' : templates.length < 5 ? ' šablóny' : ' šablón');
+        var layout = activeTemplateSettings().layout || 'classic';
+        el('layout-gallery').querySelectorAll('[data-layout]').forEach(function (button) {
+          button.setAttribute('aria-pressed', String(button.dataset.layout === layout));
+        });
+        drawTemplateRules();
+      }
+
+      function conditionLabel(condition) {
+        if (condition.field === 'discountPercent' && condition.operator === 'gte') return 'Zľava najmenej ' + condition.value + ' %';
+        if (condition.operator === 'categoryIn') return 'Kategória: ' + condition.value.join(', ');
+        return condition.field + ' ' + condition.operator + ' ' + condition.value;
+      }
+
+      function drawTemplateRules() {
+        if (!draft.templateRules.length) {
+          el('template-rules').innerHTML = '<div class="empty">Zatiaľ bez pravidiel. Všetky produkty použijú predvolenú šablónu.</div>';
+          return;
+        }
+        el('template-rules').innerHTML = draft.templateRules.map(function (rule, index) {
+          var template = draft.templateVariants.find(function (item) { return item.id === rule.templateId; });
+          var estimate = templateEstimate && templateEstimate.ruleCounts ? templateEstimate.ruleCounts[rule.id] : null;
+          return '<div class="rule-row"><span class="rule-index">' + (index + 1) + '</span><div class="rule-copy"><strong>' + escapeHtml(rule.name) + ' → ' + escapeHtml(template ? template.name : rule.templateId) + '</strong>' +
+            '<span>' + escapeHtml(rule.conditions.map(conditionLabel).join(' a ')) + (estimate == null ? '' : ' · ' + count(estimate) + ' produktov') + '</span></div>' +
+            '<button type="button" data-rule-up="' + index + '" title="Posunúť vyššie"' + (index === 0 ? ' disabled' : '') + '>↑</button>' +
+            '<button type="button" data-rule-down="' + index + '" title="Posunúť nižšie"' + (index === draft.templateRules.length - 1 ? ' disabled' : '') + '>↓</button>' +
+            '<button type="button" data-rule-delete="' + index + '" title="Odstrániť pravidlo">×</button></div>';
+        }).join('');
+        el('template-rules').querySelectorAll('[data-rule-delete]').forEach(function (button) {
+          button.addEventListener('click', function () { draft.templateRules.splice(Number(button.dataset.ruleDelete), 1); drawTemplateStudio(); updateTemplateActionState(); scheduleTemplateEstimate(); });
+        });
+        el('template-rules').querySelectorAll('[data-rule-up],[data-rule-down]').forEach(function (button) {
+          button.addEventListener('click', function () {
+            var from = Number(button.dataset.ruleUp == null ? button.dataset.ruleDown : button.dataset.ruleUp);
+            var to = button.dataset.ruleUp == null ? from + 1 : from - 1;
+            var moved = draft.templateRules.splice(from, 1)[0];
+            draft.templateRules.splice(to, 0, moved);
+            drawTemplateStudio(); updateTemplateActionState(); scheduleTemplateEstimate();
+          });
+        });
+      }
+
+      function templatePayload() {
+        return {
+          template:draft.template, brand:draft.brand,
+          templateVariants:draft.templateVariants, templateRules:draft.templateRules
+        };
+      }
+
+      function scheduleTemplateEstimate(immediate) {
+        clearTimeout(templateEstimateTimer);
+        templateEstimateTimer = setTimeout(loadTemplateEstimate, immediate ? 0 : 250);
+      }
+
+      async function loadTemplateEstimate() {
+        if (!selectedId || !draft) return;
+        var clientId = selectedId;
+        el('template-rule-estimate').textContent = 'Počítam…';
+        try {
+          var result = await apiRequest('/api/client/' + encodeURIComponent(clientId) + '/template/estimate', {
+            method:'POST', headers:{ 'content-type':'application/json', accept:'application/json' },
+            body:JSON.stringify(templatePayload())
+          });
+          if (clientId !== selectedId) return;
+          templateEstimate = result.estimate;
+          el('template-rule-estimate').textContent = count(templateEstimate.totalCount) + ' produktov · +' + count(templateEstimate.addedByRulesCount) + ' z pravidiel';
+          drawTemplateRules();
+        } catch (error) {
+          el('template-rule-estimate').textContent = 'Odhad nedostupný';
+        }
+      }
+
+      async function loadTemplateRuleCategories() {
+        try {
+          var result = await api('/api/client/' + encodeURIComponent(selectedId) + '/filters');
+          if (!draft) return;
+          var filters = result.filters;
+          var field = filters.fields.find(function (item) { return item.field === filters.field; }) || filters.fields[0];
+          el('rule-category').dataset.field = field ? field.field : '';
+          el('rule-category').innerHTML = field && field.choices.length
+            ? field.choices.map(function (choice) { return '<option value="' + escapeHtml(choice.value) + '">' + escapeHtml(choice.value) + ' · ' + count(choice.count) + '</option>'; }).join('')
+            : '<option value="">Feed neobsahuje vhodné kategórie</option>';
+        } catch (error) {
+          el('rule-category').innerHTML = '<option value="">Kategórie sa nepodarilo načítať</option>';
+        }
       }
 
       function updateTemplateActionState(message, kind) {
@@ -1029,10 +1192,11 @@
           currentClient.config = result.config;
           currentClient.templateVersion = result.templateVersion;
           currentClient.editorSchema = result.editorSchema;
+          currentClient.feed.eligibleCount = result.estimatedRerenderCount;
           draft.brand.logoPath = result.config.brand.logoPath;
           draft.brand.fontRegularPath = result.config.brand.fontRegularPath;
           draft.brand.fontBoldPath = result.config.brand.fontBoldPath;
-          if (logo) draft.template.logo.show = true;
+          if (logo) activeTemplateSettings().logo.show = true;
           el('template-version').textContent = count(result.templateVersion);
           el('template-logo-upload').value = '';
           el('template-font-regular-upload').value = '';
@@ -1048,6 +1212,7 @@
 
       function drawEditor() {
         if (!currentClient || !draft) return;
+        drawTemplateStudio();
         el('editor-fields').innerHTML = currentClient.editorSchema.map(function (section) {
           return '<div class="card"><div class="card-head"><h2>' + escapeHtml(section.label) + '</h2></div>' +
             '<div class="card-body">' + section.fields.map(renderField).join('') + '</div></div>';
@@ -1221,7 +1386,7 @@
           var response = await fetch('/api/client/' + encodeURIComponent(selectedId) + '/preview', {
             method:'POST',
             headers:{ 'content-type':'application/json', accept:'image/jpeg' },
-            body:JSON.stringify({ sku:selectedProduct.id, template:draft.template, brand:draft.brand })
+            body:JSON.stringify({ sku:selectedProduct.id, template:activeTemplateSettings(), brand:draft.brand })
           });
           if (!response.ok) {
             var errorBody = await response.json();
@@ -1253,7 +1418,13 @@
         if (renderedPreviewUrl) URL.revokeObjectURL(renderedPreviewUrl);
         renderedPreviewUrl = null;
         currentClient = client;
-        draft = { brand:clone(client.config.brand), template:clone(client.config.template) };
+        activeTemplateId = 'default';
+        draft = {
+          brand:clone(client.config.brand), template:clone(client.config.template),
+          templateVariants:clone(client.config.templateVariants || []),
+          templateRules:clone(client.config.templateRules || [])
+        };
+        templateEstimate = null;
         products = [];
         selectedProduct = null;
         gridOffset = 0;
@@ -1262,6 +1433,8 @@
         catalogFilters = null;
         catalogFiltersClientId = null;
         drawEditor();
+        loadTemplateRuleCategories();
+        scheduleTemplateEstimate(true);
         el('sample-product').innerHTML = '<option>Načítavam produkty…</option>';
         await loadProducts();
       }
@@ -1351,6 +1524,74 @@
         drawCatalogFilterChoices();
       });
       el('save-catalog-filter').addEventListener('click', saveCatalogFilters);
+      el('template-slot').addEventListener('change', function () {
+        activeTemplateId = el('template-slot').value;
+        drawEditor();
+        schedulePreview(true);
+      });
+      el('duplicate-template').addEventListener('click', function () {
+        var name = window.prompt('Názov novej šablóny:', 'Výpredaj');
+        if (!name || !name.trim()) return;
+        var base = slug(name) || 'sablona';
+        var id = base;
+        var suffix = 2;
+        while (draft.templateVariants.some(function (item) { return item.id === id; })) id = base + '-' + suffix++;
+        draft.templateVariants.push({ id:id, name:name.trim(), template:clone(activeTemplateSettings()) });
+        activeTemplateId = id;
+        drawEditor();
+        updateTemplateActionState();
+        schedulePreview(true);
+      });
+      el('delete-template').addEventListener('click', function () {
+        if (activeTemplateId === 'default') return;
+        var variant = draft.templateVariants.find(function (item) { return item.id === activeTemplateId; });
+        if (!variant || !window.confirm('Odstrániť šablónu „' + variant.name + '“ aj všetky pravidlá, ktoré ju používajú?')) return;
+        draft.templateVariants = draft.templateVariants.filter(function (item) { return item.id !== activeTemplateId; });
+        draft.templateRules = draft.templateRules.filter(function (rule) { return rule.templateId !== activeTemplateId; });
+        activeTemplateId = 'default';
+        drawEditor();
+        updateTemplateActionState();
+        schedulePreview(true);
+        scheduleTemplateEstimate();
+      });
+      el('layout-gallery').querySelectorAll('[data-layout]').forEach(function (button) {
+        button.addEventListener('click', function () {
+          activeTemplateSettings().layout = button.dataset.layout;
+          drawEditor();
+          updateTemplateActionState();
+          schedulePreview(true);
+        });
+      });
+      el('rule-kind').addEventListener('change', function () {
+        var category = el('rule-kind').value === 'category';
+        el('rule-category-wrap').hidden = !category;
+        el('rule-discount-wrap').hidden = category;
+      });
+      el('add-template-rule').addEventListener('click', function () {
+        var templateId = el('rule-template').value;
+        var template = draft.templateVariants.find(function (item) { return item.id === templateId; });
+        if (!template) return;
+        var condition;
+        var name;
+        if (el('rule-kind').value === 'category') {
+          var category = el('rule-category').value;
+          var field = el('rule-category').dataset.field;
+          if (!category || !field) return showError(new Error('Feed neobsahuje kategóriu, ktorú možno použiť v pravidle.'));
+          condition = { field:field, operator:'categoryIn', value:[category] };
+          name = 'Kategória ' + category;
+        } else {
+          var minimum = Number(el('rule-discount').value);
+          if (!Number.isInteger(minimum) || minimum < 1 || minimum > 99) return showError(new Error('Minimálna zľava musí byť od 1 do 99 %.'));
+          condition = { field:'discountPercent', operator:'gte', value:minimum };
+          name = 'Zľava od ' + minimum + ' %';
+        }
+        var ruleId = 'rule-' + Date.now().toString(36);
+        draft.templateRules.push({ id:ruleId, name:name, templateId:templateId, conditions:[condition] });
+        drawTemplateStudio();
+        updateTemplateActionState();
+        schedulePreview(true);
+        scheduleTemplateEstimate();
+      });
       el('sample-product').addEventListener('change', function () {
         selectedProduct = products.find(function (product) { return product.id === el('sample-product').value; });
         renderedPreviewUrl = renderedPreviewUrl && (URL.revokeObjectURL(renderedPreviewUrl), null);
@@ -1363,7 +1604,12 @@
         if (!hasUnsavedTemplateChanges()) return;
         latestPreviewRequest += 1;
         clearTimeout(previewTimer);
-        draft = { brand:clone(currentClient.config.brand), template:clone(currentClient.config.template) };
+        activeTemplateId = 'default';
+        draft = {
+          brand:clone(currentClient.config.brand), template:clone(currentClient.config.template),
+          templateVariants:clone(currentClient.config.templateVariants || []),
+          templateRules:clone(currentClient.config.templateRules || [])
+        };
         drawEditor();
         updateTemplateActionState('Neuložené zmeny boli zahodené. Obnovená je verzia v' + currentClient.templateVersion + '.', 'ok');
         schedulePreview(true);
@@ -1399,6 +1645,9 @@
       });
       el('save-template').addEventListener('click', async function () {
         if (!hasUnsavedTemplateChanges() || templateSaving) return;
+        var usedTemplateIds = new Set(draft.templateRules.map(function (rule) { return rule.templateId; }));
+        var unusedTemplates = draft.templateVariants.filter(function (template) { return !usedTemplateIds.has(template.id); });
+        if (unusedTemplates.length && !window.confirm('Šablóny ' + unusedTemplates.map(function (template) { return '„' + template.name + '“'; }).join(', ') + ' nemajú pravidlo a pri renderovaní sa nepoužijú. Napriek tomu uložiť?')) return;
         templateSaving = true;
         updateTemplateActionState();
         clearError();
@@ -1406,15 +1655,21 @@
           var result = await apiRequest('/api/client/' + encodeURIComponent(selectedId) + '/template', {
             method:'PUT',
             headers:{ 'content-type':'application/json', accept:'application/json' },
-            body:JSON.stringify({ template:draft.template, brand:draft.brand })
+            body:JSON.stringify(templatePayload())
           });
           currentClient.config = result.config;
           currentClient.templateVersion = result.templateVersion;
           currentClient.editorSchema = result.editorSchema;
-          draft = { brand:clone(result.config.brand), template:clone(result.config.template) };
+          draft = {
+            brand:clone(result.config.brand), template:clone(result.config.template),
+            templateVariants:clone(result.config.templateVariants || []),
+            templateRules:clone(result.config.templateRules || [])
+          };
           el('template-version').textContent = count(result.templateVersion);
           templateSaving = false;
           drawEditor();
+          scheduleTemplateEstimate(true);
+          await loadProducts();
           updateTemplateActionState('Zmeny boli uložené ako verzia v' + result.templateVersion + '. Na prerenderovanie je pripravených približne ' + count(result.estimatedRerenderCount) + ' SKU.', 'ok');
           showMessage('Šablóna bola uložená ako verzia ' + result.templateVersion + '. Na prerenderovanie je pripravených približne ' + count(result.estimatedRerenderCount) + ' SKU.');
         } catch (error) {
@@ -1424,7 +1679,10 @@
         }
       });
       el('start-render').addEventListener('click', async function () {
-        var unsaved = currentClient && JSON.stringify(draft) !== JSON.stringify({ brand:currentClient.config.brand, template:currentClient.config.template });
+        var unsaved = currentClient && JSON.stringify(draft) !== JSON.stringify({
+          brand:currentClient.config.brand, template:currentClient.config.template,
+          templateVariants:currentClient.config.templateVariants || [], templateRules:currentClient.config.templateRules || []
+        });
         var warning = unsaved ? 'Neuložené zmeny sa nepoužijú. ' : '';
         if (!window.confirm(warning + 'Spustiť render a publikovať výsledok do R2?')) return;
         clearError();

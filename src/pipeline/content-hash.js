@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { resolveProductTemplate } from "../render/template-resolver.js";
 
 function canonicalize(value) {
   if (Array.isArray(value)) return value.map(canonicalize);
@@ -11,6 +12,7 @@ function canonicalize(value) {
 }
 
 export function contentHash(product, config) {
+  const selected = resolveProductTemplate(product, config);
   const renderedProduct = {
     id: product.id,
     title: product.title,
@@ -21,7 +23,8 @@ export function contentHash(product, config) {
   };
   const content = canonicalize({
     product: renderedProduct,
-    template: config.template,
+    templateId: selected.id,
+    template: selected.template,
     brand: config.brand,
     output: config.output,
     templateVersion: config.templateVersion,

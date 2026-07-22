@@ -34,10 +34,14 @@ async function loadLogo(relativePath, maximumWidth) {
 }
 
 export async function loadRenderAssets(config) {
+  const logoMaximumWidth = Math.max(
+    config.template.logo.maxWidth,
+    ...(config.templateVariants ?? []).map((variant) => variant.template.logo.maxWidth),
+  );
   const [regular, bold, logo] = await Promise.all([
     loadFont(config.brand.fontRegularPath, "Regular font"),
     loadFont(config.brand.fontBoldPath, "Bold font"),
-    loadLogo(config.brand.logoPath, config.template.logo.maxWidth),
+    loadLogo(config.brand.logoPath, logoMaximumWidth),
   ]);
 
   return {

@@ -35,6 +35,7 @@ test("new clients get isolated paths and a valid reusable config", () => {
   assert.equal(config.brand.fontRegularPath, "assets/clients/novy-klient/font-regular.ttf");
   assert.equal(config.brand.fontBoldPath, "assets/clients/novy-klient/font-bold.ttf");
   assert.equal(config.template.logo.show, true);
+  assert.equal(config.template.theme.primaryColor, "#123456");
   assert.equal(config.templateVersion, 1);
 });
 

@@ -40,13 +40,15 @@ export async function listClientIds() {
     .sort();
 }
 
-export async function saveClientTemplate(clientId, { template, brand }) {
+export async function saveClientTemplate(clientId, { template, brand, templateVariants, templateRules }) {
   const current = await loadClientConfig(clientId);
   const next = {
     ...current,
     templateVersion: current.templateVersion + 1,
     template,
     brand,
+    templateVariants: templateVariants ?? current.templateVariants ?? [],
+    templateRules: templateRules ?? current.templateRules ?? [],
   };
   const errors = validateClientConfig(next, clientId);
   if (errors.length > 0) {

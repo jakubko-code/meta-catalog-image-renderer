@@ -55,7 +55,10 @@ function assetKey(config) {
     logoPath: config.brand.logoPath,
     fontRegularPath: config.brand.fontRegularPath,
     fontBoldPath: config.brand.fontBoldPath,
-    logoMaxWidth: config.template.logo.maxWidth,
+    logoMaxWidths: [
+      config.template.logo.maxWidth,
+      ...(config.templateVariants ?? []).map((variant) => variant.template.logo.maxWidth),
+    ],
   });
 }
 
@@ -87,6 +90,6 @@ export async function renderDraftPreview(clientId, body) {
   const product = feed.products.find((candidate) => candidate.id === body.sku);
   if (!product) throw new HttpError(404, `Product ${JSON.stringify(body.sku)} was not found among eligible products.`);
 
-  const image = await renderProduct(product, draftConfig, await cachedAssets(draftConfig));
+  const image = await renderProduct(product, draftConfig, await cachedAssets(draftConfig), body.template);
   return { image, product };
 }

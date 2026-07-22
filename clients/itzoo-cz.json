@@ -1,7 +1,7 @@
 {
   "clientId": "itzoo-cz",
   "name": "ITzoo.cz",
-  "templateVersion": 3,
+  "templateVersion": 7,
   "feed": {
     "url": "https://feedfiles.woolytech.com/itzoo-b76b.myshopify.com/HOB8anDDAc.tsv",
     "format": "csv",
@@ -52,6 +52,10 @@
     "fontBoldPath": "assets/fonts/Poppins-Bold.ttf"
   },
   "template": {
+    "layout": "classic",
+    "theme": {
+      "primaryColor": "#58a6a0"
+    },
     "backgroundColor": "#f7f5ef",
     "padding": 48,
     "productImage": {
@@ -66,9 +70,9 @@
     "price": {
       "show": true,
       "position": "bottomLeft",
-      "fontSize": 64,
-      "showOriginalPrice": true,
-      "saleLabel": "AKCIOVÁ CENA",
+      "fontSize": 60,
+      "showOriginalPrice": false,
+      "saleLabel": "Akčná cena",
       "regularLabel": "CENA",
       "backgroundColor": "#111111",
       "textColor": "#FFFFFF",
@@ -99,5 +103,69 @@
     "imageKeyPrefix": "images",
     "stateKey": "state.json",
     "supplementaryFeedKey": "supplementary.csv"
-  }
+  },
+  "templateVariants": [
+    {
+      "id": "vypredaj-1",
+      "name": "Výpredaj 1",
+      "template": {
+        "layout": "minimal",
+        "theme": {
+          "primaryColor": "#00ff1e"
+        },
+        "backgroundColor": "#f7f5ef",
+        "padding": 48,
+        "productImage": {
+          "fit": "contain",
+          "heightPercent": 62
+        },
+        "logo": {
+          "show": true,
+          "position": "topLeft",
+          "maxWidth": 190
+        },
+        "price": {
+          "show": true,
+          "position": "bottomLeft",
+          "fontSize": 64,
+          "showOriginalPrice": false,
+          "saleLabel": "AKCIOVÁ CENA",
+          "regularLabel": "CENA",
+          "backgroundColor": "#111111",
+          "textColor": "#FFFFFF",
+          "originalPriceColor": "#58a6a0"
+        },
+        "discountBadge": {
+          "show": true,
+          "minimumPercent": 1,
+          "position": "topRight",
+          "text": "-{percent} %",
+          "backgroundColor": "#cb2d3e",
+          "textColor": "#FFFFFF"
+        },
+        "title": {
+          "show": true,
+          "fontSize": 30,
+          "maxCharacters": 72,
+          "textColor": "#111111"
+        }
+      }
+    }
+  ],
+  "templateRules": [
+    {
+      "id": "rule-mrwkyurb",
+      "name": "Kategória Monitor",
+      "templateId": "vypredaj-1",
+      "conditions": [
+        {
+          "field": "source.product_type",
+          "operator": "categoryIn",
+          "value": [
+            "Monitor"
+          ]
+        }
+      ]
+    }
+  ]
 }

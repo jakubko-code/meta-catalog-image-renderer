@@ -15,7 +15,8 @@ port forwarding ani zmenu bind adresy vystaviť do internetu.
 UI používa rovnaké klientské konfigurácie a pipeline moduly ako príkazový riadok.
 Feed drží v pamäti najviac 10 minút; tlačidlo „Obnoviť feed“ vynúti nové stiahnutie.
 
-Uloženie šablóny atómovo zapíše sekcie `template` a `brand` a zvýši
+Uloženie šablóny atómovo zapíše branding, predvolenú šablónu, ďalšie šablóny
+a pravidlá ich použitia a zvýši
 `templateVersion`. Tlačidlo „Renderovať a publikovať“ spustí background beh cez
 R2, preto lokálne UI potrebuje platné R2 premenné v `.env`. Beh pokračuje aj po
 zatvorení karty, kým zostane spustený Node server.
@@ -28,6 +29,25 @@ kategórie. Pole kategórie sa vyberá z reálnych polí feedu. Výber nadradene
 kategórie zahŕňa aj všetky hodnoty pod ňou oddelené znakom `>`; viac vybraných
 vetiev používa OR logiku. Filter dostupnosti a povinný obrázok zostávajú zachované.
 Po zmene filtra treba spustiť publikovanie, aby sa nový výber zapísal do R2 feedu.
+
+### Viac šablón pre jedného klienta
+
+V záložke **Šablóna** je vždy jedna bezpečná predvolená šablóna. Tlačidlom
+**Duplikovať** možno vytvoriť ďalšie pomenované šablóny a každej zvoliť rozloženie
+Klasická, Rozdelená, Spodný pás alebo Minimalistická. Všetky existujúce nastavenia
+farieb, loga, ceny, titulku a odznaku sa upravujú samostatne pre práve vybranú
+šablónu. Logo a fontové súbory sú spoločné assety klienta, ale hlavná farba rámu
+a ostatné vizuálne farby sú súčasťou konkrétnej šablóny a medzi šablónami sa
+neprepisujú.
+
+Pravidlá priraďujú odvodenú šablónu produktom podľa minimálnej zľavy alebo vetvy
+kategórie. Vyhodnocujú sa zhora nadol a prvé zhodné pravidlo vyhrá. Produkt zachytený
+pravidlom sa zaradí do renderovania aj vtedy, keď je mimo kategórií vybraných v
+záložke **Filtre**; povinný obrázok a základné pravidlá, napríklad dostupnosť, však
+stále musí splniť. Výsledný výber je teda zjednotenie katalógového filtra a pravidiel
+šablón. Ak sa nezhoduje žiadne pravidlo, zaradený produkt použije predvolenú šablónu.
+Zmena šablón alebo pravidiel zvýši `templateVersion`; následný render preto bezpečne
+pripraví nové obrázky.
 
 ### Viacerí klienti
 

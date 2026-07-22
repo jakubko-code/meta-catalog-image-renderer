@@ -1,4 +1,5 @@
 export const EDITOR_FIELD_OPTIONS = {
+  "template.layout": { options: ["classic", "split", "bottomBanner", "minimal"] },
   "template.padding": { minimum: 0, maximum: 500, step: 1 },
   "template.productImage.fit": { options: ["contain", "cover"] },
   "template.productImage.heightPercent": { minimum: 1, maximum: 100, step: 1, suffix: "%" },
@@ -13,6 +14,13 @@ export const EDITOR_FIELD_OPTIONS = {
 };
 
 function labelFor(key) {
+  const labels = {
+    theme: "Farby šablóny",
+    primaryColor: "Hlavná farba",
+    accentColor: "Akcentová farba",
+    textColor: "Farba textu",
+  };
+  if (labels[key]) return labels[key];
   return key
     .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
     .replace(/^./, (character) => character.toUpperCase());
@@ -50,11 +58,7 @@ function describeObject(value, path) {
 }
 
 export function createEditorSchema(config) {
-  const editableBrand = Object.fromEntries(Object.entries(config.brand).filter(([key]) => (
-    !["logoPath", "fontRegularPath", "fontBoldPath"].includes(key)
-  )));
   return [
-    { kind: "section", key: "brand", label: "Branding", fields: describeObject(editableBrand, "brand") },
     { kind: "section", key: "template", label: "Šablóna", fields: describeObject(config.template, "template") },
   ];
 }

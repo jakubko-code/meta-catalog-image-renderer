@@ -2,7 +2,7 @@ import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { downloadFeed } from "../feed/download-feed.js";
-import { filterProducts } from "../feed/filter-products.js";
+import { selectRenderProducts } from "../feed/select-render-products.js";
 import { normalizeProducts } from "../feed/normalize-product.js";
 import { parseFeed } from "../feed/parse-feed.js";
 import { resolveProjectPath } from "../project-root.js";
@@ -66,7 +66,8 @@ export async function renderCatalog(config, {
   const source = await downloadFeed(config.feed.url);
   const sourceProducts = parseFeed(source, config.feed);
   const normalized = normalizeProducts(sourceProducts, config.feed.fields);
-  const eligibleProducts = filterProducts(normalized.products, config.filters);
+  const selection = selectRenderProducts(normalized.products, config);
+  const eligibleProducts = selection.products;
   const selectedProducts = limit === undefined ? eligibleProducts : eligibleProducts.slice(0, limit);
   reportProgress({
     stage: "preparing",

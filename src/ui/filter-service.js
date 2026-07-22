@@ -68,7 +68,8 @@ export async function getCatalogFilterOptions(config) {
     field: activeRule?.field ?? suggestedField,
     values: activeRule?.value ?? [],
     baseCount: baseProducts.length,
-    eligibleCount: feed.eligibleCount,
+    eligibleCount: feed.catalogProductCount ?? feed.eligibleCount,
+    renderEligibleCount: feed.eligibleCount,
     fields,
   };
 }

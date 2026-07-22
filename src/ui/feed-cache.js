@@ -1,5 +1,5 @@
 import { downloadFeed } from "../feed/download-feed.js";
-import { filterProducts } from "../feed/filter-products.js";
+import { selectRenderProducts } from "../feed/select-render-products.js";
 import { normalizeProducts } from "../feed/normalize-product.js";
 import { parseFeed } from "../feed/parse-feed.js";
 
@@ -15,7 +15,8 @@ export async function loadFeed(config, { force = false, ttlMs = DEFAULT_TTL_MS }
   const source = await downloadFeed(config.feed.url);
   const sourceProducts = parseFeed(source, config.feed);
   const normalized = normalizeProducts(sourceProducts, config.feed.fields);
-  const products = filterProducts(normalized.products, config.filters);
+  const selection = selectRenderProducts(normalized.products, config);
+  const products = selection.products;
   const value = {
     sourceCount: sourceProducts.length,
     normalizedCount: normalized.products.length,
@@ -25,6 +26,9 @@ export async function loadFeed(config, { force = false, ttlMs = DEFAULT_TTL_MS }
     errors: normalized.errors,
     allProducts: normalized.products,
     products,
+    catalogProductCount: selection.catalogProducts.length,
+    addedByTemplateRulesCount: selection.addedByRulesCount,
+    templateRuleCounts: Object.fromEntries(selection.ruleCounts),
     loadedAt: new Date(now).toISOString(),
   };
 

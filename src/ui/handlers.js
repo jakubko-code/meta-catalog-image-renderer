@@ -2,12 +2,14 @@ import { getClient, getClients, getProducts, getRuns } from "./read-model.js";
 import { createEditorSchema } from "../config/editor-schema.js";
 import { saveClientTemplate } from "../config/load-config.js";
 import { PreviewQueue, renderDraftPreview } from "./preview-service.js";
-import { loadFeed } from "./feed-cache.js";
+import { clearFeedCache, loadFeed } from "./feed-cache.js";
 import { getRenderJob, startRenderJob } from "./run-store.js";
 import { loadR2Usage } from "../storage/r2-usage.js";
 import { analyzeClientFeed, createClient } from "../config/create-client.js";
 import { getCatalogFilterOptions, updateCatalogFilter } from "./filter-service.js";
 import { saveClientAssets } from "../config/save-client-assets.js";
+import { validateClientConfig } from "../config/validate-config.js";
+import { selectRenderProducts } from "../feed/select-render-products.js";
 
 const previewQueue = new PreviewQueue();
 
@@ -127,7 +129,10 @@ export async function saveTemplateHandler(request) {
   const config = await saveClientTemplate(request.params.id, {
     template: request.body.template,
     brand: request.body.brand,
+    templateVariants: request.body.templateVariants,
+    templateRules: request.body.templateRules,
   });
+  clearFeedCache(request.params.id);
   const feed = await loadFeed(config);
   return json({
     config,
@@ -135,6 +140,37 @@ export async function saveTemplateHandler(request) {
     templateVersion: config.templateVersion,
     estimatedRerenderCount: feed.eligibleCount,
   });
+}
+
+export async function templateEstimateHandler(request) {
+  if (!request.body || typeof request.body !== "object" || Array.isArray(request.body)) {
+    const error = new Error("Expected a JSON object.");
+    error.statusCode = 400;
+    throw error;
+  }
+  const client = await getClient(request.params.id);
+  const draftConfig = {
+    ...client.config,
+    template: request.body.template,
+    brand: request.body.brand,
+    templateVariants: request.body.templateVariants ?? [],
+    templateRules: request.body.templateRules ?? [],
+  };
+  const errors = validateClientConfig(draftConfig, request.params.id);
+  if (errors.length) {
+    const error = new Error(errors.join("; "));
+    error.statusCode = 400;
+    throw error;
+  }
+  const feed = await loadFeed(client.config);
+  const selection = selectRenderProducts(feed.allProducts, draftConfig);
+  return json({ estimate: {
+    baseCount: selection.baseProducts.length,
+    catalogCount: selection.catalogProducts.length,
+    addedByRulesCount: selection.addedByRulesCount,
+    totalCount: selection.products.length,
+    ruleCounts: Object.fromEntries(selection.ruleCounts),
+  } });
 }
 
 export async function saveClientAssetsHandler(request) {

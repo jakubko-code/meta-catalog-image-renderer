@@ -27,13 +27,21 @@ function truncate(value, maximumLength) {
 export function createProductTemplate(product, config, assets, productImage) {
   const { width, height } = config.output;
   const { brand, template } = config;
+  const theme = template.theme ?? brand;
   const scale = Math.min(width, height) / 1080;
   const size = (value) => Math.round(value * scale);
   const padding = size(template.padding);
-  const footerHeight = size(176);
-  const priceWidth = size(510);
-  const productTop = size(128);
-  const productHeight = Math.round(height * (template.productImage.heightPercent / 100));
+  const layout = template.layout ?? "classic";
+  const footerHeight = size(layout === "bottomBanner" ? 150 : 176);
+  const priceWidth = layout === "bottomBanner" ? width - (padding * 2) : size(layout === "split" ? 360 : 510);
+  const productTop = size(layout === "minimal" ? 96 : layout === "split" ? 150 : 128);
+  const configuredProductHeight = Math.round(height * (template.productImage.heightPercent / 100));
+  const productHeight = layout === "split"
+    ? Math.min(configuredProductHeight, height - productTop - padding)
+    : layout === "bottomBanner"
+      ? Math.min(configuredProductHeight + size(90), height - productTop - footerHeight - padding * 2)
+      : configuredProductHeight;
+  const productWidth = layout === "split" ? Math.round(width * 0.58) - padding : width - (padding * 2);
   const logoWidth = size(template.logo.maxWidth);
   const logoHeight = Math.round(logoWidth / assets.logo.aspectRatio);
   const hasDiscount = product.discountPercent !== null
@@ -48,7 +56,7 @@ export function createProductTemplate(product, config, assets, productImage) {
         left: 0,
         width,
         height: size(14),
-        backgroundColor: brand.primaryColor,
+        backgroundColor: theme.primaryColor,
       },
     }),
     element("div", {
@@ -57,18 +65,18 @@ export function createProductTemplate(product, config, assets, productImage) {
         position: "absolute",
         top: productTop,
         left: padding,
-        width: width - (padding * 2),
+        width: productWidth,
         height: productHeight,
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "#ffffff",
-        borderRadius: size(28),
-        border: `${size(2)}px solid ${brand.primaryColor}`,
+        backgroundColor: layout === "minimal" ? "transparent" : "#ffffff",
+        borderRadius: size(layout === "minimal" ? 0 : 28),
+        border: layout === "minimal" ? "0px solid transparent" : `${size(2)}px solid ${theme.primaryColor}`,
         overflow: "hidden",
       },
     }, element("img", {
       src: productImage,
-      width: width - (padding * 2) - size(28),
+      width: productWidth - size(layout === "minimal" ? 0 : 28),
       height: productHeight - size(28),
       style: { objectFit: template.productImage.fit },
     })),
@@ -114,7 +122,7 @@ export function createProductTemplate(product, config, assets, productImage) {
           fontSize: size(18),
           fontWeight: 700,
           letterSpacing: size(2),
-          color: brand.primaryColor,
+          color: theme.primaryColor,
         },
       }, product.price.sale === null ? template.price.regularLabel : template.price.saleLabel),
       element("div", {
@@ -151,13 +159,15 @@ export function createProductTemplate(product, config, assets, productImage) {
       style: {
         display: "flex",
         flexDirection: "column",
-        ...anchoredPosition(template.price.position, padding),
+        ...(layout === "split"
+          ? { position: "absolute", right: padding, bottom: padding }
+          : anchoredPosition(template.price.position, padding)),
         width: priceWidth,
         height: footerHeight,
         paddingLeft: size(34),
         paddingRight: size(34),
         justifyContent: "center",
-        borderRadius: size(24),
+        borderRadius: size(layout === "bottomBanner" ? 12 : layout === "minimal" ? 999 : 24),
         backgroundColor: template.price.backgroundColor,
       },
     }, ...priceChildren));
@@ -165,15 +175,22 @@ export function createProductTemplate(product, config, assets, productImage) {
 
   if (template.title.show) {
     const titleOnRight = template.price.position.endsWith("Left");
+    const titleStyle = layout === "split"
+      ? {
+        position: "absolute", right: padding, top: size(245), width: width - productWidth - (padding * 3),
+        height: size(270), alignItems: "center",
+      }
+      : layout === "bottomBanner"
+        ? { position: "absolute", left: padding, bottom: footerHeight + padding * 2, width: width - padding * 2, height: size(80), alignItems: "center" }
+        : {
+          position: "absolute", bottom: padding,
+          ...(titleOnRight ? { right: padding } : { left: padding }),
+          width: width - (padding * 3) - priceWidth, height: footerHeight, alignItems: "center",
+        };
     children.push(element("div", {
       style: {
         display: "flex",
-        position: "absolute",
-        bottom: padding,
-        ...(titleOnRight ? { right: padding } : { left: padding }),
-        width: width - (padding * 3) - priceWidth,
-        height: footerHeight,
-        alignItems: "center",
+        ...titleStyle,
         color: template.title.textColor,
         fontSize: size(template.title.fontSize),
         fontWeight: 700,

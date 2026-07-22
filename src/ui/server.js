@@ -14,6 +14,7 @@ import {
   renderStatusHandler,
   runsHandler,
   saveTemplateHandler,
+  templateEstimateHandler,
   saveCatalogFiltersHandler,
   saveClientAssetsHandler,
   startRenderHandler,
@@ -28,6 +29,7 @@ const productsPath = /^\/api\/client\/([a-z0-9][a-z0-9-]*)\/products$/;
 const filtersPath = /^\/api\/client\/([a-z0-9][a-z0-9-]*)\/filters$/;
 const previewPath = /^\/api\/client\/([a-z0-9][a-z0-9-]*)\/preview$/;
 const templatePath = /^\/api\/client\/([a-z0-9][a-z0-9-]*)\/template$/;
+const templateEstimatePath = /^\/api\/client\/([a-z0-9][a-z0-9-]*)\/template\/estimate$/;
 const assetsPath = /^\/api\/client\/([a-z0-9][a-z0-9-]*)\/assets$/;
 const renderPath = /^\/api\/client\/([a-z0-9][a-z0-9-]*)\/render$/;
 const renderStatusPath = /^\/api\/client\/([a-z0-9][a-z0-9-]*)\/render\/status$/;
@@ -132,6 +134,16 @@ async function route(request, response) {
     send(response, await previewHandler({
       url,
       params: { id: previewMatch[1] },
+      body: await readJson(request),
+    }));
+    return;
+  }
+
+  const templateEstimateMatch = url.pathname.match(templateEstimatePath);
+  if (request.method === "POST" && templateEstimateMatch) {
+    send(response, await templateEstimateHandler({
+      url,
+      params: { id: templateEstimateMatch[1] },
       body: await readJson(request),
     }));
     return;
