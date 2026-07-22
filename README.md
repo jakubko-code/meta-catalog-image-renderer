@@ -58,8 +58,9 @@ Výsledné počty sa zobrazia v job summary.
 
 ## R2 využitie v lokálnom UI
 
-Prehľad zobrazuje aktuálne Standard storage a mesačné Class A/Class B operácie
-voči free-tier limitom. Metriky sa cachujú 5 minút a dajú sa obnoviť ručne.
+Záložka **Nastavenia** zobrazuje aktuálne Standard storage a mesačné Class A/Class
+B operácie voči free-tier limitom. Ide o globálne využitie spoločné pre všetkých
+klientov. Metriky sa cachujú 5 minút a dajú sa obnoviť ručne.
 
 Do lokálneho `.env` pridaj `CLOUDFLARE_API_TOKEN` s read-only oprávneniami
 `Account Analytics Read` a `Workers R2 Storage Read`. Tento token nie je potrebný
