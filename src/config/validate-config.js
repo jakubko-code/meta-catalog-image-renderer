@@ -168,6 +168,7 @@ function validateBrand(brand, checks) {
   if (!checks.object(brand, "brand")) return;
   checks.knownKeys(brand, "brand", [
     "logoPath",
+    "backgroundImagePath",
     "primaryColor",
     "accentColor",
     "textColor",
@@ -175,6 +176,9 @@ function validateBrand(brand, checks) {
     "fontBoldPath",
   ]);
   checks.relativePath(brand.logoPath, "brand.logoPath", [".svg", ".png", ".webp"]);
+  if (brand.backgroundImagePath !== undefined) {
+    checks.relativePath(brand.backgroundImagePath, "brand.backgroundImagePath", [".png", ".webp"]);
+  }
   checks.string(brand.primaryColor, "brand.primaryColor", { pattern: HEX_COLOR });
   checks.string(brand.accentColor, "brand.accentColor", { pattern: HEX_COLOR });
   checks.string(brand.textColor, "brand.textColor", { pattern: HEX_COLOR });
@@ -188,6 +192,7 @@ function validateTemplate(template, checks, errors) {
     "layout",
     "theme",
     "backgroundColor",
+    "backgroundImage",
     "padding",
     "productImage",
     "logo",
@@ -201,6 +206,11 @@ function validateTemplate(template, checks, errors) {
     checks.string(template.theme.primaryColor, "template.theme.primaryColor", { pattern: HEX_COLOR });
   }
   checks.string(template.backgroundColor, "template.backgroundColor", { pattern: HEX_COLOR });
+  if (template.backgroundImage !== undefined
+    && checks.object(template.backgroundImage, "template.backgroundImage")) {
+    checks.knownKeys(template.backgroundImage, "template.backgroundImage", ["show"]);
+    checks.boolean(template.backgroundImage.show, "template.backgroundImage.show");
+  }
   checks.integer(
     template.padding,
     "template.padding",
@@ -266,8 +276,17 @@ function validateTemplate(template, checks, errors) {
       EDITOR_FIELD_OPTIONS["template.price.fontSize"].maximum,
     );
     checks.boolean(template.price.showOriginalPrice, "template.price.showOriginalPrice");
-    checks.string(template.price.saleLabel, "template.price.saleLabel");
-    checks.string(template.price.regularLabel, "template.price.regularLabel");
+    if (template.layout === "cleanBackdrop") {
+      if (typeof template.price.saleLabel !== "string") {
+        errors.push(`template.price.saleLabel: expected string, received ${valueType(template.price.saleLabel)}`);
+      }
+      if (typeof template.price.regularLabel !== "string") {
+        errors.push(`template.price.regularLabel: expected string, received ${valueType(template.price.regularLabel)}`);
+      }
+    } else {
+      checks.string(template.price.saleLabel, "template.price.saleLabel");
+      checks.string(template.price.regularLabel, "template.price.regularLabel");
+    }
     checks.string(template.price.backgroundColor, "template.price.backgroundColor", { pattern: HEX_COLOR });
     checks.string(template.price.textColor, "template.price.textColor", { pattern: HEX_COLOR });
     checks.string(template.price.originalPriceColor, "template.price.originalPriceColor", { pattern: HEX_COLOR });

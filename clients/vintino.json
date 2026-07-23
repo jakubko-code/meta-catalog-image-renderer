@@ -1,7 +1,7 @@
 {
   "clientId": "vintino",
   "name": "Vintino",
-  "templateVersion": 2,
+  "templateVersion": 4,
   "feed": {
     "url": "https://www.vintino.sk/facebook/export/products.xml?hash=Qohbsw06JmihiZwzc4vzR",
     "format": "xml",
@@ -45,7 +45,7 @@
     "quality": 90
   },
   "brand": {
-    "logoPath": "assets/clients/vintino/logo.svg",
+    "logoPath": "assets/clients/vintino/logo.png",
     "primaryColor": "#D9AF42",
     "accentColor": "#CB2D3E",
     "textColor": "#FFFFFF",

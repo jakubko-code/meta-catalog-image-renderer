@@ -71,6 +71,34 @@ test("template design catalog contains unique IDs and complete metadata", () => 
   }
 });
 
+test("clean backdrop design has the requested reusable defaults", () => {
+  const design = TEMPLATE_DESIGNS.find((candidate) => candidate.id === "cleanBackdrop");
+  assert.equal(design.defaults.backgroundColor, "#FFFFFF");
+  assert.equal(design.defaults.backgroundImage.show, false);
+  assert.equal(design.defaults.productImage.backgroundRemoval.enabled, true);
+  assert.equal(design.defaults.logo.position, "bottomRight");
+  assert.equal(design.defaults.price.position, "topLeft");
+  assert.match(design.defaults.discountBadge.text, /{percent}/);
+  assert.equal(design.defaults.title.show, false);
+});
+
+test("clean backdrop places an uploaded background behind the product", () => {
+  const tree = createProductTemplate(product, {
+    ...config,
+    template: {
+      ...template,
+      layout: "cleanBackdrop",
+      backgroundImage: { show: true },
+    },
+  }, {
+    logo: { dataUri: pixel, aspectRatio: 1 },
+    background: { dataUri: pixel },
+  }, pixel);
+  assert.equal(tree.props.children[0].type, "img");
+  assert.equal(tree.props.children[0].props.src, pixel);
+  assert.equal(tree.props.children[0].props.style.objectFit, "cover");
+});
+
 test("template theme overrides the shared client brand color", () => {
   const tree = createProductTemplate(product, {
     ...config,

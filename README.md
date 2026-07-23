@@ -63,6 +63,12 @@ Pridanie ďalšieho vizuálneho vzoru preto nevyžaduje rozširovať jeden spolo
 renderer o ďalšie vetvenie. Každý dizajn má samostatnú verziu rendereru; jej
 zvýšenie označí na prerenderovanie iba produkty, ktoré daný dizajn používajú.
 
+Dizajn **Čisté pozadie** používa bielu alebo nastaviteľnú farbu, prípadne vlastný
+obrázok pozadia. Pozadie sa nahráva v rozmere presne 1080 × 1080 px a uloží sa
+medzi assety klienta. Dizajn predvolene zapne BiRefNet výrez produktu, cenu umiestni
+hore vľavo, zľavu priamo pod cenu a logo vpravo dole. Všetky tieto hodnoty sa po
+vytvorení šablóny dajú ďalej upraviť.
+
 ### Viacerí klienti
 
 V ľavom paneli zvoľ **Pridať klienta**. Formulár pred uložením stiahne a overí
@@ -76,8 +82,8 @@ formáte TTF, OTF alebo WOFF (WOFF2 renderer nepodporuje). Súbory sa uložia do
 `assets/clients/<id>/`, takže lokálny náhľad aj GitHub Actions používajú presne
 rovnakú typografiu. Ak sa fonty nenahrajú, použije sa spoločný Poppins.
 
-Logo aj fontový pár možno nahrať alebo vymeniť aj neskôr v záložke **Šablóna →
-Logo a fonty**. Nahratie aktualizuje klientsku konfiguráciu, zapne nové logo,
+Logo, pozadie aj fontový pár možno nahrať alebo vymeniť aj neskôr v záložke
+**Šablóny → Logo, pozadie a fonty**. Nahratie aktualizuje klientsku konfiguráciu,
 zvýši `templateVersion` a obnoví živý náhľad. Cesty k assetom sa v bežnom editore
 nezobrazujú ako ručne editovateľné textové polia.
 

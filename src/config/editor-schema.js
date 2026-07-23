@@ -142,6 +142,7 @@ export function createEditorSchema(config) {
     "layout",
     "theme",
     "backgroundColor",
+    "backgroundImage",
     "padding",
     ...sectionDefinitions.map(([key]) => key),
   ]);

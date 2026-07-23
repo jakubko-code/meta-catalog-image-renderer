@@ -1,7 +1,7 @@
 {
   "clientId": "itzoo-cz",
   "name": "ITzoo.cz",
-  "templateVersion": 9,
+  "templateVersion": 11,
   "feed": {
     "url": "https://feedfiles.woolytech.com/itzoo-b76b.myshopify.com/HOB8anDDAc.tsv",
     "format": "csv",
@@ -48,18 +48,19 @@
     "accentColor": "#cb2d3e",
     "textColor": "#FFFFFF",
     "fontRegularPath": "assets/fonts/Poppins-Regular.ttf",
-    "fontBoldPath": "assets/fonts/Poppins-Bold.ttf"
+    "fontBoldPath": "assets/fonts/Poppins-Bold.ttf",
+    "backgroundImagePath": "assets/clients/itzoo-cz/background.png"
   },
   "template": {
-    "layout": "classic",
+    "layout": "cleanBackdrop",
     "theme": {
       "primaryColor": "#58a6a0"
     },
-    "backgroundColor": "#f7f5ef",
-    "padding": 48,
+    "backgroundColor": "#FFFFFF",
+    "padding": 40,
     "productImage": {
       "fit": "contain",
-      "heightPercent": 62,
+      "heightPercent": 74,
       "backgroundRemoval": {
         "enabled": true,
         "provider": "birefnet",
@@ -68,33 +69,36 @@
     },
     "logo": {
       "show": true,
-      "position": "topLeft",
-      "maxWidth": 190
+      "position": "bottomRight",
+      "maxWidth": 150
     },
     "price": {
       "show": true,
-      "position": "bottomLeft",
-      "fontSize": 60,
-      "showOriginalPrice": false,
-      "saleLabel": "Akčná cena",
+      "position": "topLeft",
+      "fontSize": 62,
+      "showOriginalPrice": true,
+      "saleLabel": "AKCIOVÁ CENA",
       "regularLabel": "CENA",
-      "backgroundColor": "#111111",
-      "textColor": "#FFFFFF",
-      "originalPriceColor": "#58a6a0"
+      "backgroundColor": "#FFFFFF",
+      "textColor": "#111111",
+      "originalPriceColor": "#666666"
     },
     "discountBadge": {
       "show": true,
       "minimumPercent": 1,
-      "position": "topRight",
-      "text": "-{percent} %",
-      "backgroundColor": "#cb2d3e",
-      "textColor": "#FFFFFF"
+      "position": "topLeft",
+      "text": "Zľava {percent} %",
+      "backgroundColor": "#FFFFFF",
+      "textColor": "#D63B38"
     },
     "title": {
-      "show": true,
+      "show": false,
       "fontSize": 30,
-      "maxCharacters": 48,
+      "maxCharacters": 72,
       "textColor": "#111111"
+    },
+    "backgroundImage": {
+      "show": true
     }
   },
   "processing": {

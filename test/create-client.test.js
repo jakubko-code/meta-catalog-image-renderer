@@ -1,8 +1,13 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import sharp from "sharp";
 
-import { buildClientConfig, prepareClientFonts } from "../src/config/create-client.js";
+import {
+  buildClientConfig,
+  prepareClientBackground,
+  prepareClientFonts,
+} from "../src/config/create-client.js";
 import { createEditorSchema } from "../src/config/editor-schema.js";
 import { validateClientConfig } from "../src/config/validate-config.js";
 
@@ -65,6 +70,19 @@ test("unknown template design is rejected by client validation", () => {
   assert.match(validateClientConfig(config, "neznamy-dizajn").join("; "), /template\.layout/);
 });
 
+test("clean backdrop accepts empty price labels that it does not render", () => {
+  const config = buildClientConfig({
+    clientId: "ciste-pozadie",
+    name: "Čisté pozadie",
+    feed: { url: "https://example.com/products.xml", format: "xml", productPath: "rss.channel.item", fields },
+    storage: { bucket: "meta-catalog-images", publicBaseUrl: "https://assets.example.com" },
+  });
+  config.template.layout = "cleanBackdrop";
+  config.template.price.saleLabel = "";
+  config.template.price.regularLabel = "";
+  assert.deepEqual(validateClientConfig(config, "ciste-pozadie"), []);
+});
+
 test("availability filter can be disabled for feeds with custom values", () => {
   const config = buildClientConfig({
     clientId: "csv-klient",
@@ -90,4 +108,25 @@ test("client fonts are validated by the production renderer", async () => {
   });
   assert.equal(fonts.regular.extension, ".ttf");
   assert.equal(fonts.bold.extension, ".ttf");
+});
+
+test("template background accepts and normalizes an exact 1080 square", async () => {
+  const source = await sharp({
+    create: { width: 1080, height: 1080, channels: 3, background: "#f1eee8" },
+  }).jpeg().toBuffer();
+  const background = await prepareClientBackground({ data: source.toString("base64") });
+  const metadata = await sharp(background).metadata();
+  assert.equal(metadata.format, "png");
+  assert.equal(metadata.width, 1080);
+  assert.equal(metadata.height, 1080);
+});
+
+test("template background rejects a wrong image size", async () => {
+  const source = await sharp({
+    create: { width: 1200, height: 630, channels: 3, background: "#ffffff" },
+  }).png().toBuffer();
+  await assert.rejects(
+    prepareClientBackground({ data: source.toString("base64") }),
+    /exactly 1080 × 1080 px/,
+  );
 });

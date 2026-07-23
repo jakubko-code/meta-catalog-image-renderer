@@ -33,15 +33,28 @@ async function loadLogo(relativePath, maximumWidth) {
   };
 }
 
+async function loadBackground(relativePath) {
+  if (!relativePath) return null;
+  let source;
+  try {
+    source = await readFile(resolveProjectPath(relativePath));
+  } catch (error) {
+    if (error.code === "ENOENT") throw new Error(`Template background was not found at ${relativePath}.`);
+    throw error;
+  }
+  return { dataUri: `data:image/png;base64,${source.toString("base64")}` };
+}
+
 export async function loadRenderAssets(config) {
   const logoMaximumWidth = Math.max(
     config.template.logo.maxWidth,
     ...(config.templateVariants ?? []).map((variant) => variant.template.logo.maxWidth),
   );
-  const [regular, bold, logo] = await Promise.all([
+  const [regular, bold, logo, background] = await Promise.all([
     loadFont(config.brand.fontRegularPath, "Regular font"),
     loadFont(config.brand.fontBoldPath, "Bold font"),
     loadLogo(config.brand.logoPath, logoMaximumWidth),
+    loadBackground(config.brand.backgroundImagePath),
   ]);
 
   return {
@@ -50,5 +63,6 @@ export async function loadRenderAssets(config) {
       { name: "BrandFont", data: bold, weight: 700, style: "normal" },
     ],
     logo,
+    background,
   };
 }

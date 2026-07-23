@@ -15,6 +15,7 @@ import { validateClientConfig } from "./validate-config.js";
 const CLIENT_ID = /^[a-z0-9][a-z0-9-]*$/;
 const HEX_COLOR = /^#[0-9a-f]{6}$/i;
 const MAX_LOGO_BYTES = 2 * 1024 * 1024;
+const MAX_BACKGROUND_BYTES = 10 * 1024 * 1024;
 const MAX_FONT_BYTES = 3 * 1024 * 1024;
 
 function badRequest(message) {
@@ -181,6 +182,27 @@ export async function prepareClientLogo(logo, name) {
       .toBuffer();
   } catch {
     throw badRequest("Logo is not a valid SVG, PNG, JPEG or WebP image.");
+  }
+}
+
+export async function prepareClientBackground(background) {
+  if (!background || typeof background.data !== "string" || !background.data) {
+    throw badRequest("Background image data is missing.");
+  }
+  const source = Buffer.from(background.data, "base64");
+  if (!source.length || source.length > MAX_BACKGROUND_BYTES) {
+    throw badRequest("Background image must be smaller than 10 MB.");
+  }
+  try {
+    const image = sharp(source, { density: 144 });
+    const metadata = await image.metadata();
+    if (metadata.width !== 1080 || metadata.height !== 1080) {
+      throw badRequest(`Background image must be exactly 1080 × 1080 px; received ${metadata.width ?? "?"} × ${metadata.height ?? "?"} px.`);
+    }
+    return await image.png({ compressionLevel: 9 }).toBuffer();
+  } catch (error) {
+    if (error.statusCode === 400) throw error;
+    throw badRequest("Background is not a valid PNG, JPEG or WebP image.");
   }
 }
 

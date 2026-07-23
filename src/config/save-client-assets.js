@@ -3,7 +3,7 @@ import { mkdir, rename, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { resolveProjectPath } from "../project-root.js";
-import { prepareClientFonts, prepareClientLogo } from "./create-client.js";
+import { prepareClientBackground, prepareClientFonts, prepareClientLogo } from "./create-client.js";
 import { loadClientConfig } from "./load-config.js";
 import { validateClientConfig } from "./validate-config.js";
 
@@ -15,12 +15,16 @@ function badRequest(message) {
 
 export async function saveClientAssets(clientId, input) {
   const hasLogo = Boolean(input.logo);
+  const hasBackground = Boolean(input.background);
   const hasFonts = Boolean(input.fontRegular || input.fontBold);
-  if (!hasLogo && !hasFonts) throw badRequest("Upload a logo, a Regular/Bold font pair, or both.");
+  if (!hasLogo && !hasBackground && !hasFonts) {
+    throw badRequest("Upload a logo, a 1080 × 1080 px background, a Regular/Bold font pair, or a combination of them.");
+  }
 
   const current = await loadClientConfig(clientId);
-  const [logo, fonts] = await Promise.all([
+  const [logo, background, fonts] = await Promise.all([
     hasLogo ? prepareClientLogo(input.logo, current.name) : null,
+    hasBackground ? prepareClientBackground(input.background) : null,
     hasFonts ? prepareClientFonts(input) : null,
   ]);
   const regularName = fonts ? `font-regular${fonts.regular.extension}` : null;
@@ -31,6 +35,7 @@ export async function saveClientAssets(clientId, input) {
     brand: {
       ...current.brand,
       ...(logo ? { logoPath: `assets/clients/${clientId}/logo.png` } : {}),
+      ...(background ? { backgroundImagePath: `assets/clients/${clientId}/background.png` } : {}),
       ...(fonts ? {
         fontRegularPath: `assets/clients/${clientId}/${regularName}`,
         fontBoldPath: `assets/clients/${clientId}/${boldName}`,
@@ -49,6 +54,7 @@ export async function saveClientAssets(clientId, input) {
   const suffix = `.tmp-${process.pid}-${randomUUID()}`;
   const files = [
     ...(logo ? [{ name: "logo.png", data: logo }] : []),
+    ...(background ? [{ name: "background.png", data: background }] : []),
     ...(fonts ? [
       { name: regularName, data: fonts.regular.data },
       { name: boldName, data: fonts.bold.data },
