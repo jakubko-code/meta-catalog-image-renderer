@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { resolveProductTemplate } from "../render/template-resolver.js";
 import { LOCAL_BACKGROUND_PIPELINE_VERSION } from "../background/u2net-background-removal.js";
+import { getTemplateDesign } from "../template-designs/catalog.js";
 
 function canonicalize(value) {
   if (Array.isArray(value)) return value.map(canonicalize);
@@ -14,6 +15,7 @@ function canonicalize(value) {
 
 export function contentHash(product, config) {
   const selected = resolveProductTemplate(product, config);
+  const design = getTemplateDesign(selected.template.layout);
   const renderedProduct = {
     id: product.id,
     title: product.title,
@@ -29,6 +31,7 @@ export function contentHash(product, config) {
     brand: config.brand,
     output: config.output,
     templateVersion: config.templateVersion,
+    ...(design?.version > 1 ? { templateDesignVersion: design.version } : {}),
     backgroundRemovalPipelineVersion: selected.template.productImage?.backgroundRemoval?.enabled
       ? LOCAL_BACKGROUND_PIPELINE_VERSION
       : null,

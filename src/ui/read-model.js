@@ -7,6 +7,7 @@ import { contentHash } from "../pipeline/content-hash.js";
 import { resolveProjectPath } from "../project-root.js";
 import { loadFeed } from "./feed-cache.js";
 import { loadRuns } from "./run-store.js";
+import { templateDesignLibrary } from "../template-designs/catalog.js";
 
 async function loadValidConfig(clientId) {
   const config = await loadClientConfig(clientId);
@@ -72,7 +73,13 @@ export async function getClient(clientId, options = {}) {
     loadValidConfig(clientId),
     loadRuns(clientId),
   ]);
-  return { ...overview, config, editorSchema: createEditorSchema(config), runs: runs.slice(0, 20) };
+  return {
+    ...overview,
+    config,
+    editorSchema: createEditorSchema(config),
+    templateDesignLibrary: templateDesignLibrary(),
+    runs: runs.slice(0, 20),
+  };
 }
 
 export async function getRuns(clientId) {

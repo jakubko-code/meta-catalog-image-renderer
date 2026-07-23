@@ -53,6 +53,13 @@
     .card-head { padding:13px 16px; border-bottom:1px solid var(--line-soft); display:flex; justify-content:space-between; align-items:center; gap:12px }
     .card-head h2 { margin:0; font-size:13.5px; font-weight:600 }
     .card-body { padding:16px }
+    .settings-card > summary { list-style:none; cursor:pointer; user-select:none }
+    .settings-card > summary::-webkit-details-marker { display:none }
+    .settings-card:not([open]) > summary { border-bottom:0 }
+    .settings-heading { min-width:0 }
+    .settings-description { margin-top:3px; color:var(--faint); font-size:11.5px }
+    .settings-chevron { color:var(--faint); font-size:17px; line-height:1; transition:transform .16s ease }
+    .settings-card[open] .settings-chevron { transform:rotate(180deg) }
     table { width:100%; border-collapse:collapse; font-size:13px }
     th { text-align:left; color:var(--faint); font:10px var(--mono); letter-spacing:.12em; text-transform:uppercase; padding:10px 16px; border-bottom:1px solid var(--line-soft) }
     td { padding:11px 16px; border-bottom:1px solid var(--line-soft) }
@@ -176,12 +183,38 @@
     .asset-current code { color:var(--accent); font:11px var(--mono) }
     .asset-foot { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-top:14px }
     .template-toolbar { display:grid; grid-template-columns:minmax(180px,1fr) auto auto; gap:9px; align-items:end }
-    .layout-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:9px; margin-top:14px }
-    .layout-option { min-height:74px; border:1px solid var(--line); border-radius:7px; background:var(--bg); padding:10px; cursor:pointer; text-align:left }
-    .layout-option:hover { border-color:#3c424c }
-    .layout-option[aria-pressed=true] { border-color:var(--accent); background:#1a2626 }
-    .layout-option strong,.layout-option span { display:block }
-    .layout-option span { margin-top:4px; color:var(--faint); font-size:11px }
+    .active-design { display:flex; align-items:center; gap:12px; margin-top:13px; padding:11px 12px; border:1px solid var(--line-soft); border-radius:7px; background:var(--bg) }
+    .active-design-copy { min-width:0 }
+    .active-design-copy strong,.active-design-copy span { display:block }
+    .active-design-copy span { margin-top:2px; color:var(--faint); font-size:11.5px }
+    .design-library-head { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:14px }
+    .design-library { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:12px }
+    .design-card { overflow:hidden; border:1px solid var(--line); border-radius:8px; background:var(--bg) }
+    .design-card.selected { border-color:var(--accent); box-shadow:inset 0 0 0 1px var(--accent) }
+    .design-preview { position:relative; height:112px; overflow:hidden; border-bottom:1px solid var(--line-soft); background:#f7f5ef }
+    .design-preview::before { content:""; position:absolute; top:0; left:0; right:0; height:4px; background:#58a6a0 }
+    .design-preview span { position:absolute; display:block }
+    .design-preview .dp-logo { top:14px; left:13px; width:22px; height:22px; border-radius:50%; background:#7b243f }
+    .design-preview .dp-product { top:31px; left:35px; width:116px; height:48px; border:2px solid #58a6a0; border-radius:7px; background:#fff }
+    .design-preview .dp-product::after { content:""; position:absolute; left:22px; right:22px; top:14px; bottom:9px; border-radius:50% 50% 35% 35%; background:#8b9298 }
+    .design-preview .dp-price { left:13px; bottom:11px; width:78px; height:19px; border-radius:5px; background:#111 }
+    .design-preview .dp-title { right:13px; bottom:14px; width:86px; height:12px; border-top:3px solid #25272a; border-bottom:3px solid #25272a }
+    .design-preview .dp-badge { top:13px; right:13px; width:36px; height:23px; border-radius:999px; background:#cb2d3e }
+    .design-preview-split .dp-product { top:25px; left:12px; width:112px; height:67px }
+    .design-preview-split .dp-price { left:auto; right:12px; bottom:12px; width:64px; height:28px }
+    .design-preview-split .dp-title { right:12px; top:42px; bottom:auto; width:67px; height:18px }
+    .design-preview-bottomBanner .dp-product { top:22px; left:26px; width:155px; height:54px }
+    .design-preview-bottomBanner .dp-price { left:12px; right:12px; bottom:8px; width:auto; height:23px }
+    .design-preview-bottomBanner .dp-title { left:42px; right:42px; bottom:35px; width:auto }
+    .design-preview-minimal .dp-product { border:0; background:transparent; top:25px; left:29px; width:150px; height:58px }
+    .design-preview-minimal .dp-product::after { left:32px; right:32px; top:8px; bottom:5px }
+    .design-preview-minimal .dp-price { border-radius:999px }
+    .design-card-body { padding:11px 12px }
+    .design-card-title { display:flex; align-items:center; justify-content:space-between; gap:8px }
+    .design-card-title strong { font-size:13px }
+    .design-card-body p { min-height:36px; margin:6px 0 11px; color:var(--faint); font-size:11.5px; line-height:1.45 }
+    .design-card-actions { display:flex; gap:7px }
+    .design-card-actions .btn { flex:1; padding:6px 8px; font-size:11.5px }
     .rule-builder { display:grid; grid-template-columns:minmax(130px,.7fr) minmax(180px,1fr) minmax(180px,1.25fr) auto; gap:9px; align-items:end }
     .rule-list { margin-top:14px; border:1px solid var(--line); border-radius:7px; overflow:hidden }
     .rule-row { display:flex; align-items:center; gap:10px; padding:10px 11px; border-bottom:1px solid var(--line-soft); background:var(--bg) }
@@ -209,7 +242,7 @@
       .field-wide,.section-title { grid-column:1 }
       .filter-toolbar,.filter-summary { grid-template-columns:1fr }
       .asset-grid { grid-template-columns:1fr }
-      .template-toolbar,.rule-builder,.layout-grid { grid-template-columns:1fr }
+      .template-toolbar,.rule-builder,.design-library { grid-template-columns:1fr }
     }
     @media(min-width:761px) and (max-width:1100px) { .editor { grid-template-columns:1fr } .preview-dock { position:static; max-width:500px } }
     @media(prefers-reduced-motion:reduce) { .spinner { animation:none } }
@@ -241,7 +274,7 @@
         </div>
         <nav class="tabs" role="tablist" aria-label="Sekcie klienta a nástroja">
           <button class="tab" role="tab" aria-selected="true" data-view="overview">Prehľad</button>
-          <button class="tab" role="tab" aria-selected="false" data-view="template">Šablóna</button>
+          <button class="tab" role="tab" aria-selected="false" data-view="template">Šablóny</button>
           <button class="tab" role="tab" aria-selected="false" data-view="filters">Filtre</button>
           <button class="tab" role="tab" aria-selected="false" data-view="products">Produkty</button>
           <button class="tab" role="tab" aria-selected="false" data-view="meta">Feed pre Meta</button>
@@ -294,13 +327,20 @@
                     <button class="btn" id="duplicate-template" type="button">Duplikovať</button>
                     <button class="btn" id="delete-template" type="button" disabled>Odstrániť</button>
                   </div>
-                  <span class="micro">Rozloženie</span>
-                  <div class="layout-grid" id="layout-gallery">
-                    <button class="layout-option" data-layout="classic" type="button"><strong>Klasická</strong><span>Univerzálne rozloženie</span></button>
-                    <button class="layout-option" data-layout="split" type="button"><strong>Rozdelená</strong><span>Produkt vľavo, informácie vpravo</span></button>
-                    <button class="layout-option" data-layout="bottomBanner" type="button"><strong>Spodný pás</strong><span>Veľký produkt a výrazná cena</span></button>
-                    <button class="layout-option" data-layout="minimal" type="button"><strong>Minimalistická</strong><span>Čisté pozadie bez rámu</span></button>
+                  <div class="active-design">
+                    <span class="tag">Dizajn</span>
+                    <div class="active-design-copy"><strong id="active-design-name">—</strong><span id="active-design-description">—</span></div>
                   </div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-head"><div><h2>Knižnica dizajnov</h2><div class="sub">Globálne vzory dostupné všetkým klientom; dizajn môžeš použiť alebo z neho vytvoriť novú šablónu</div></div><span class="tag" id="design-count">—</span></div>
+                <div class="card-body">
+                  <div class="design-library-head">
+                    <div class="chips" id="design-category-filter"></div>
+                    <span class="micro">Spoločná knižnica</span>
+                  </div>
+                  <div class="design-library" id="design-library"></div>
                 </div>
               </div>
               <div class="card">
@@ -548,6 +588,7 @@
       var catalogFiltersClientId = null;
       var templateSaving = false;
       var activeTemplateId = 'default';
+      var designCategory = 'all';
       var templateEstimate = null;
       var templateEstimateTimer = null;
       var number = new Intl.NumberFormat('sk-SK');
@@ -977,7 +1018,10 @@
         }
         if (field.type === 'select') {
           return '<div class="field"><label>' + escapeHtml(field.label) + '</label><select' + attributes + '>' +
-            field.options.map(function (option) { return '<option value="' + escapeHtml(option) + '"' + (option === value ? ' selected' : '') + '>' + escapeHtml(option) + '</option>'; }).join('') +
+            field.options.map(function (option) {
+              var optionLabel = field.optionLabels && field.optionLabels[option] || option;
+              return '<option value="' + escapeHtml(option) + '"' + (option === value ? ' selected' : '') + '>' + escapeHtml(optionLabel) + '</option>';
+            }).join('') +
             '</select></div>';
         }
         if (field.type === 'color') {
@@ -1002,24 +1046,113 @@
         });
       }
 
+      function templateDesign(designId) {
+        var library = currentClient && currentClient.templateDesignLibrary;
+        return library && library.designs.find(function (design) { return design.id === designId; });
+      }
+
+      function designCategoryName(categoryId) {
+        var library = currentClient && currentClient.templateDesignLibrary;
+        var category = library && library.categories.find(function (item) { return item.id === categoryId; });
+        return category ? category.name : categoryId;
+      }
+
+      function designPreviewMarkup(designId) {
+        return '<div class="design-preview design-preview-' + escapeHtml(designId) + '">' +
+          '<span class="dp-logo"></span><span class="dp-product"></span><span class="dp-price"></span>' +
+          '<span class="dp-title"></span><span class="dp-badge"></span></div>';
+      }
+
+      function nextTemplateIdentity(name) {
+        var base = slug(name) || 'sablona';
+        var id = base;
+        var suffix = 2;
+        while (draft.templateVariants.some(function (item) { return item.id === id; })) id = base + '-' + suffix++;
+        return id;
+      }
+
+      function createTemplateFromDesign(design) {
+        var name = window.prompt('Názov novej šablóny:', design.name);
+        if (!name || !name.trim()) return;
+        var settings = clone(activeTemplateSettings());
+        settings.layout = design.id;
+        var id = nextTemplateIdentity(name.trim());
+        draft.templateVariants.push({ id:id, name:name.trim(), template:settings });
+        activeTemplateId = id;
+        drawEditor();
+        updateTemplateActionState();
+        schedulePreview(true);
+      }
+
+      function drawDesignLibrary() {
+        var library = currentClient && currentClient.templateDesignLibrary;
+        if (!library) return;
+        if (!library.categories.some(function (category) { return category.id === designCategory; })) designCategory = 'all';
+        var activeDesignId = activeTemplateSettings().layout || 'classic';
+        var designs = library.designs.filter(function (design) {
+          return designCategory === 'all' || design.category === designCategory;
+        });
+        var designTotal = library.designs.length;
+        el('design-count').textContent = count(designTotal) + (designTotal === 1 ? ' dizajn' : designTotal < 5 ? ' dizajny' : ' dizajnov');
+        el('design-category-filter').innerHTML = library.categories.map(function (category) {
+          return '<button class="chip" type="button" data-design-category="' + escapeHtml(category.id) + '" aria-pressed="' + String(category.id === designCategory) + '">' +
+            escapeHtml(category.name) + '</button>';
+        }).join('');
+        el('design-library').innerHTML = designs.map(function (design) {
+          var selected = design.id === activeDesignId;
+          return '<article class="design-card' + (selected ? ' selected' : '') + '">' +
+            designPreviewMarkup(design.id) +
+            '<div class="design-card-body"><div class="design-card-title"><strong>' + escapeHtml(design.name) + '</strong><span class="micro">' + escapeHtml(designCategoryName(design.category)) + '</span></div>' +
+            '<p>' + escapeHtml(design.description) + '</p><div class="design-card-actions">' +
+            '<button class="btn" type="button" data-apply-design="' + escapeHtml(design.id) + '"' + (selected ? ' disabled' : '') + '>' + (selected ? 'Používa sa' : 'Použiť') + '</button>' +
+            '<button class="btn" type="button" data-create-design="' + escapeHtml(design.id) + '">Nová šablóna</button>' +
+            '</div></div></article>';
+        }).join('');
+        el('design-category-filter').querySelectorAll('[data-design-category]').forEach(function (button) {
+          button.addEventListener('click', function () {
+            designCategory = button.dataset.designCategory;
+            drawDesignLibrary();
+          });
+        });
+        el('design-library').querySelectorAll('[data-apply-design]').forEach(function (button) {
+          button.addEventListener('click', function () {
+            activeTemplateSettings().layout = button.dataset.applyDesign;
+            drawEditor();
+            updateTemplateActionState();
+            schedulePreview(true);
+          });
+        });
+        el('design-library').querySelectorAll('[data-create-design]').forEach(function (button) {
+          button.addEventListener('click', function () {
+            var design = templateDesign(button.dataset.createDesign);
+            if (design) createTemplateFromDesign(design);
+          });
+        });
+      }
+
       function drawTemplateStudio() {
         if (!draft) return;
-        var templates = [{ id:'default', name:'Predvolená' }].concat(draft.templateVariants);
+        var templates = [{ id:'default', name:'Predvolená', template:draft.template }].concat(draft.templateVariants);
         if (!templates.some(function (item) { return item.id === activeTemplateId; })) activeTemplateId = 'default';
         el('template-slot').innerHTML = templates.map(function (item) {
-          return '<option value="' + escapeHtml(item.id) + '"' + (item.id === activeTemplateId ? ' selected' : '') + '>' + escapeHtml(item.name) + '</option>';
+          var design = templateDesign(item.template.layout);
+          var label = item.name + (design ? ' · ' + design.name : '');
+          return '<option value="' + escapeHtml(item.id) + '"' + (item.id === activeTemplateId ? ' selected' : '') + '>' + escapeHtml(label) + '</option>';
         }).join('');
         el('rule-template').innerHTML = draft.templateVariants.length
-          ? draft.templateVariants.map(function (item) { return '<option value="' + escapeHtml(item.id) + '">' + escapeHtml(item.name) + '</option>'; }).join('')
+          ? draft.templateVariants.map(function (item) {
+            var design = templateDesign(item.template.layout);
+            return '<option value="' + escapeHtml(item.id) + '">' + escapeHtml(item.name + (design ? ' · ' + design.name : '')) + '</option>';
+          }).join('')
           : '<option value="">Najprv duplikuj šablónu</option>';
         el('rule-template').disabled = !draft.templateVariants.length;
         el('add-template-rule').disabled = !draft.templateVariants.length;
         el('delete-template').disabled = activeTemplateId === 'default';
         el('template-count').textContent = count(templates.length) + (templates.length === 1 ? ' šablóna' : templates.length < 5 ? ' šablóny' : ' šablón');
-        var layout = activeTemplateSettings().layout || 'classic';
-        el('layout-gallery').querySelectorAll('[data-layout]').forEach(function (button) {
-          button.setAttribute('aria-pressed', String(button.dataset.layout === layout));
-        });
+        var activeDesign = templateDesign(activeTemplateSettings().layout || 'classic');
+        el('active-design-name').textContent = activeDesign ? activeDesign.name : activeTemplateSettings().layout;
+        el('active-design-description').textContent = activeDesign ? activeDesign.description : 'Neznámy dizajn';
+        drawDesignLibrary();
         drawTemplateRules();
       }
 
@@ -1228,8 +1361,11 @@
         if (!currentClient || !draft) return;
         drawTemplateStudio();
         el('editor-fields').innerHTML = currentClient.editorSchema.map(function (section) {
-          return '<div class="card"><div class="card-head"><h2>' + escapeHtml(section.label) + '</h2></div>' +
-            '<div class="card-body">' + section.fields.map(renderField).join('') + '</div></div>';
+          return '<details class="card settings-card"' + (section.openByDefault ? ' open' : '') + '>' +
+            '<summary class="card-head"><div class="settings-heading"><h2>' + escapeHtml(section.label) + '</h2>' +
+            (section.description ? '<div class="settings-description">' + escapeHtml(section.description) + '</div>' : '') +
+            '</div><span class="settings-chevron" aria-hidden="true">⌄</span></summary>' +
+            '<div class="card-body">' + section.fields.map(renderField).join('') + '</div></details>';
         }).join('');
         bindEditorInputs();
         drawAssetSummary();
@@ -1243,7 +1379,7 @@
 
       function drawProductGrid(result) {
         gridTotal = result.total;
-        document.querySelectorAll('.chip').forEach(function (chip) {
+        document.querySelectorAll('.chip[data-category]').forEach(function (chip) {
           chip.setAttribute('aria-pressed', String(chip.dataset.category === gridCategory));
           chip.textContent = chip.dataset.label + ' · ' + count(result.facets[chip.dataset.category]);
         });
@@ -1616,10 +1752,7 @@
       el('duplicate-template').addEventListener('click', function () {
         var name = window.prompt('Názov novej šablóny:', 'Výpredaj');
         if (!name || !name.trim()) return;
-        var base = slug(name) || 'sablona';
-        var id = base;
-        var suffix = 2;
-        while (draft.templateVariants.some(function (item) { return item.id === id; })) id = base + '-' + suffix++;
+        var id = nextTemplateIdentity(name.trim());
         draft.templateVariants.push({ id:id, name:name.trim(), template:clone(activeTemplateSettings()) });
         activeTemplateId = id;
         drawEditor();
@@ -1637,14 +1770,6 @@
         updateTemplateActionState();
         schedulePreview(true);
         scheduleTemplateEstimate();
-      });
-      el('layout-gallery').querySelectorAll('[data-layout]').forEach(function (button) {
-        button.addEventListener('click', function () {
-          activeTemplateSettings().layout = button.dataset.layout;
-          drawEditor();
-          updateTemplateActionState();
-          schedulePreview(true);
-        });
       });
       el('rule-kind').addEventListener('change', function () {
         var category = el('rule-kind').value === 'category';
@@ -1708,7 +1833,7 @@
         updateTemplateActionState('Neuložené zmeny boli zahodené. Obnovená je verzia v' + currentClient.templateVersion + '.', 'ok');
         schedulePreview(true);
       });
-      document.querySelectorAll('.chip').forEach(function (chip) {
+      document.querySelectorAll('.chip[data-category]').forEach(function (chip) {
         chip.addEventListener('click', function () {
           gridCategory = chip.dataset.category;
           gridOffset = 0;

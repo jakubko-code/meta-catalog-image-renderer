@@ -32,7 +32,7 @@ Po zmene filtra treba spustiť publikovanie, aby sa nový výber zapísal do R2 
 
 ### Viac šablón pre jedného klienta
 
-V záložke **Šablóna** je vždy jedna bezpečná predvolená šablóna. Tlačidlom
+V záložke **Šablóny** je vždy jedna bezpečná predvolená šablóna. Tlačidlom
 **Duplikovať** možno vytvoriť ďalšie pomenované šablóny a každej zvoliť rozloženie
 Klasická, Rozdelená, Spodný pás alebo Minimalistická. Všetky existujúce nastavenia
 farieb, loga, ceny, titulku a odznaku sa upravujú samostatne pre práve vybranú
@@ -48,6 +48,20 @@ stále musí splniť. Výsledný výber je teda zjednotenie katalógového filtr
 šablón. Ak sa nezhoduje žiadne pravidlo, zaradený produkt použije predvolenú šablónu.
 Zmena šablón alebo pravidiel zvýši `templateVersion`; následný render preto bezpečne
 pripraví nové obrázky.
+
+### Knižnica dizajnov
+
+Globálna knižnica v záložke **Šablóny** oddeľuje dizajn od klientovej šablóny.
+Dizajn je znovupoužiteľný vizuálny vzor dostupný všetkým klientom. Klientova
+šablóna je jeho konkrétna upravená inštancia s vlastnými farbami, textami a
+pravidlami. Dizajn možno použiť na práve upravovanú šablónu alebo z neho jedným
+krokom vytvoriť novú šablónu klienta.
+
+Dizajny sú rozdelené do kategórií a renderery sú samostatné moduly v
+`src/render/designs/`. Centrálny katalóg je v `src/template-designs/catalog.js`.
+Pridanie ďalšieho vizuálneho vzoru preto nevyžaduje rozširovať jeden spoločný
+renderer o ďalšie vetvenie. Každý dizajn má samostatnú verziu rendereru; jej
+zvýšenie označí na prerenderovanie iba produkty, ktoré daný dizajn používajú.
 
 ### Viacerí klienti
 
@@ -124,7 +138,7 @@ Gemini zostáva ako voliteľná experimentálna metóda na porovnanie výsledkov
 prepísať predvolený stabilný model `gemini-3.1-flash-image` (Nano Banana 2). API
 kľúč sa neposiela do prehliadača; volanie vykonáva lokálny Node server.
 
-V záložke **Šablóna** vyber ukážkové SKU, zvoľ metódu a vytvor výrez. Výsledky
+V záložke **Šablóny** vyber ukážkové SKU, zvoľ metódu a vytvor výrez. Výsledky
 BiRefNetu, U²-Netu a Gemini sa ukladajú oddelene do `out/<client>/background-removal/`.
 Gemini technické jednofarebné pozadie lokálne prevedie na alfa kanál. Cache je
 odvodená od adresy zdrojového obrázka, modelu a verzie spracovania; tlačidlo

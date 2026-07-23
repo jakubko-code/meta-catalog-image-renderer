@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import { buildClientConfig, prepareClientFonts } from "../src/config/create-client.js";
+import { createEditorSchema } from "../src/config/editor-schema.js";
 import { validateClientConfig } from "../src/config/validate-config.js";
 
 const fields = {
@@ -37,6 +38,31 @@ test("new clients get isolated paths and a valid reusable config", () => {
   assert.equal(config.template.logo.show, true);
   assert.equal(config.template.theme.primaryColor, "#123456");
   assert.equal(config.templateVersion, 1);
+  const editorSchema = createEditorSchema(config);
+  assert.deepEqual(
+    editorSchema.map((section) => section.key),
+    ["appearance", "productImage", "price", "logo", "discountBadge", "title"],
+  );
+  assert.equal(editorSchema.some((section) => section.fields.some((field) => field.path === "template.layout")), false);
+  assert.equal(editorSchema.find((section) => section.key === "appearance").openByDefault, true);
+  assert.equal(editorSchema.find((section) => section.key === "logo").openByDefault, false);
+  assert.equal(
+    editorSchema.find((section) => section.key === "productImage")
+      .fields.find((field) => field.path === "template.productImage.fit")
+      .optionLabels.contain,
+    "Zobraziť celý obrázok",
+  );
+});
+
+test("unknown template design is rejected by client validation", () => {
+  const config = buildClientConfig({
+    clientId: "neznamy-dizajn",
+    name: "Neznámy dizajn",
+    feed: { url: "https://example.com/products.xml", format: "xml", productPath: "rss.channel.item", fields },
+    storage: { bucket: "meta-catalog-images", publicBaseUrl: "https://assets.example.com" },
+  });
+  config.template.layout = "missingDesign";
+  assert.match(validateClientConfig(config, "neznamy-dizajn").join("; "), /template\.layout/);
 });
 
 test("availability filter can be disabled for feeds with custom values", () => {

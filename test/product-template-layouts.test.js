@@ -5,6 +5,7 @@ import satori from "satori";
 
 import { createProductTemplate } from "../src/render/product-template.js";
 import { resolveProjectPath } from "../src/project-root.js";
+import { TEMPLATE_DESIGNS, TEMPLATE_DESIGN_CATEGORIES } from "../src/template-designs/catalog.js";
 
 const pixel = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
 const product = {
@@ -36,12 +37,12 @@ const config = {
   template,
 };
 
-test("all template layouts produce valid Satori SVG", async () => {
+test("every registered template design produces valid Satori SVG", async () => {
   const [regular, bold] = await Promise.all([
     readFile(resolveProjectPath("assets/fonts/Poppins-Regular.ttf")),
     readFile(resolveProjectPath("assets/fonts/Poppins-Bold.ttf")),
   ]);
-  for (const layout of ["classic", "split", "bottomBanner", "minimal"]) {
+  for (const { id: layout } of TEMPLATE_DESIGNS) {
     const tree = createProductTemplate(product, { ...config, template: { ...template, layout } }, {
       logo: { dataUri: pixel, aspectRatio: 1 },
     }, pixel);
@@ -54,6 +55,19 @@ test("all template layouts produce valid Satori SVG", async () => {
       ],
     });
     assert.match(svg, /^<svg/);
+  }
+});
+
+test("template design catalog contains unique IDs and complete metadata", () => {
+  const ids = TEMPLATE_DESIGNS.map((design) => design.id);
+  const categories = new Set(TEMPLATE_DESIGN_CATEGORIES.map((category) => category.id));
+  assert.equal(new Set(ids).size, ids.length);
+  for (const design of TEMPLATE_DESIGNS) {
+    assert.match(design.id, /^[a-z][a-zA-Z0-9]*$/);
+    assert.ok(design.name);
+    assert.ok(design.description);
+    assert.ok(categories.has(design.category));
+    assert.ok(Number.isInteger(design.version) && design.version >= 1);
   }
 });
 
