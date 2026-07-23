@@ -4,16 +4,27 @@ import sharp from "sharp";
 import satori from "satori";
 
 import { createProductTemplate } from "./product-template.js";
+import { removeProductBackgroundBiRefNet } from "../background/u2net-background-removal.js";
 import { loadRenderAssets } from "./load-assets.js";
 import { prepareSourceImage } from "./prepare-source-image.js";
 import { resolveProductTemplate } from "./template-resolver.js";
 
-export async function renderProduct(product, config, providedAssets, templateOverride) {
+async function prepareTemplateProductImage(product, config, template, { backgroundWorker } = {}) {
+  const removal = template.productImage.backgroundRemoval;
+  if (!removal?.enabled) return prepareSourceImage(product.imageUrl);
+  const result = await removeProductBackgroundBiRefNet(product, config, {
+    worker: backgroundWorker,
+    paddingPercent: removal.paddingPercent,
+  });
+  return `data:image/png;base64,${result.image.toString("base64")}`;
+}
+
+export async function renderProduct(product, config, providedAssets, templateOverride, options = {}) {
+  const selectedTemplate = templateOverride ?? resolveProductTemplate(product, config).template;
   const [assets, productImage] = await Promise.all([
     providedAssets ?? loadRenderAssets(config),
-    prepareSourceImage(product.imageUrl),
+    prepareTemplateProductImage(product, config, selectedTemplate, options),
   ]);
-  const selectedTemplate = templateOverride ?? resolveProductTemplate(product, config).template;
   const tree = createProductTemplate(product, { ...config, template: selectedTemplate }, assets, productImage);
   const svg = await satori(tree, {
     width: config.output.width,

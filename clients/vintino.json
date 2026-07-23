@@ -31,7 +31,8 @@
         "field": "source.g:product_type",
         "operator": "categoryIn",
         "value": [
-          "SEDACIE SÚPRAVY - SEDAČKY > KUCHYŇA > SADY HRNCOV DO KUCHYNE",
+          "NÁBYTOK > KRESLÁ",
+          "ZÁVESNÉ HOJDACIE KRESLÁ > Závesné hojdacie dvojkreslá",
           "SEDACIE SÚPRAVY - SEDAČKY > KUCHYŇA > HRNCE"
         ]
       }
@@ -60,7 +61,12 @@
     "padding": 48,
     "productImage": {
       "fit": "contain",
-      "heightPercent": 62
+      "heightPercent": 62,
+      "backgroundRemoval": {
+        "enabled": false,
+        "provider": "birefnet",
+        "paddingPercent": 5
+      }
     },
     "logo": {
       "show": true,

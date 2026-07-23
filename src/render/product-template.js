@@ -28,6 +28,7 @@ export function createProductTemplate(product, config, assets, productImage) {
   const { width, height } = config.output;
   const { brand, template } = config;
   const theme = template.theme ?? brand;
+  const withoutBackground = template.productImage.backgroundRemoval?.enabled === true;
   const scale = Math.min(width, height) / 1080;
   const size = (value) => Math.round(value * scale);
   const padding = size(template.padding);
@@ -69,15 +70,15 @@ export function createProductTemplate(product, config, assets, productImage) {
         height: productHeight,
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: layout === "minimal" ? "transparent" : "#ffffff",
+        backgroundColor: withoutBackground || layout === "minimal" ? "transparent" : "#ffffff",
         borderRadius: size(layout === "minimal" ? 0 : 28),
-        border: layout === "minimal" ? "0px solid transparent" : `${size(2)}px solid ${theme.primaryColor}`,
+        border: withoutBackground || layout === "minimal" ? "0px solid transparent" : `${size(2)}px solid ${theme.primaryColor}`,
         overflow: "hidden",
       },
     }, element("img", {
       src: productImage,
-      width: productWidth - size(layout === "minimal" ? 0 : 28),
-      height: productHeight - size(28),
+      width: productWidth - size(layout === "minimal" || withoutBackground ? 0 : 28),
+      height: productHeight - size(withoutBackground ? 0 : 28),
       style: { objectFit: template.productImage.fit },
     })),
   ];

@@ -103,3 +103,57 @@ Do lokálneho `.env` pridaj `CLOUDFLARE_API_TOKEN` s read-only oprávneniami
 pre renderovanie ani GitHub Actions; slúži iba na zobrazenie Cloudflare metrík.
 Úložisko v UI je aktuálny snapshot, zatiaľ čo Cloudflare fakturuje priemerné
 GB-month.
+
+## Odstránenie pozadia: BiRefNet, U²-Net alebo Gemini
+
+Pre bezplatné lokálne spracovanie najprv jednorazovo spusti:
+
+```bash
+npm run setup:u2net
+```
+
+Príkaz vytvorí izolované Python prostredie `.venv-rembg` a nainštaluje `rembg`.
+Lokálne modely sa stiahnu pri prvom výreze a uložia do `out/models/u2net/`.
+Predvolený novší `birefnet-general-lite` v našich produktových testoch vytvoril
+čistejšie hrany než základný U²-Net. Zdrojový obrázok pri lokálnej metóde neopustí
+počítač. Po vyrezaní sa priehľadné okraje automaticky orežú a produkt sa zväčší
+podľa nastaveného okraja.
+
+Gemini zostáva ako voliteľná experimentálna metóda na porovnanie výsledkov. Do lokálneho
+`.env` pridaj `GEMINI_API_KEY`. Voliteľná premenná `GEMINI_IMAGE_MODEL` môže
+prepísať predvolený stabilný model `gemini-3.1-flash-image` (Nano Banana 2). API
+kľúč sa neposiela do prehliadača; volanie vykonáva lokálny Node server.
+
+V záložke **Šablóna** vyber ukážkové SKU, zvoľ metódu a vytvor výrez. Výsledky
+BiRefNetu, U²-Netu a Gemini sa ukladajú oddelene do `out/<client>/background-removal/`.
+Gemini technické jednofarebné pozadie lokálne prevedie na alfa kanál. Cache je
+odvodená od adresy zdrojového obrázka, modelu a verzie spracovania; tlačidlo
+**Vytvoriť výrez znova** cache vedome obíde.
+
+### Použitie výrezu vo finálnej šablóne
+
+V editore konkrétnej šablóny otvor skupinu **Produktový obrázok → Odstránenie
+pozadia** a zapni **Použiť produkt bez pozadia**. Nastavenie platí iba pre danú
+šablónu. Produkty priradené cez pravidlá k inej šablóne preto môžu zostať s
+pôvodným pozadím. Posuvník **Okraj okolo výrezu** určuje, koľko voľného priestoru
+zostane okolo produktu.
+
+Živý náhľad aj finálny render následne používajú BiRefNet. Výrez sa vloží priamo
+na farbu pozadia šablóny bez pôvodnej bielej plochy a rámu. Po uložení šablóny sa
+zvýši `templateVersion`, takže dotknuté produkty sa pri ďalšom renderovaní vytvoria
+znova a supplementary feed bude ukazovať na nové obrázky.
+
+Výrez sa cachuje. Zmena farieb, textov alebo okraja preto nespúšťa drahú segmentáciu
+znova. Denný GitHub Actions beh má vlastné Python prostredie aj cache modelu a túto
+funkciu podporuje automaticky; prvé spracovanie väčšieho počtu produktov bude
+prirodzene dlhšie.
+
+BiRefNet produkty spracováva postupne a po každom výreze obnoví ONNX proces. Tým
+sa pri dávke neuvoľnená pracovná pamäť nehromadí do swapu. Predvolene používa dve
+CPU vlákna; na výkonnejšom stroji možno počet zmeniť cez premennú
+`REMBG_CPU_THREADS`.
+
+Pri zdrojoch s bielym pozadím sa navyše automaticky kontroluje, či BiRefNet
+neodstránil veľkú bielu plochu uzavretú vo vnútri produktu, napríklad displej
+notebooku. Ochranná oprava sa použije iba pri výrazne neúplnej maske; pri bežných
+produktoch a prirodzených otvoroch zostáva pôvodná BiRefNet maska nezmenená.

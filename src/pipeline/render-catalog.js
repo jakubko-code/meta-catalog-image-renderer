@@ -8,6 +8,8 @@ import { parseFeed } from "../feed/parse-feed.js";
 import { resolveProjectPath } from "../project-root.js";
 import { loadRenderAssets } from "../render/load-assets.js";
 import { renderProduct } from "../render/render-product.js";
+import { resolveProductTemplate } from "../render/template-resolver.js";
+import { createLocalBackgroundWorker } from "../background/local-background-worker.js";
 import { contentHash } from "./content-hash.js";
 import { loadLocalState, saveLocalState } from "./local-state.js";
 import { writeSupplementaryFeed } from "./supplementary-feed.js";
@@ -160,36 +162,45 @@ export async function renderCatalog(config, {
   );
 
   const assets = pending.length > 0 ? await loadRenderAssets(config) : null;
-  const renderResults = await runWorkerPool(
-    pending,
-    config.processing.concurrency,
-    async ({ product, entry, imagePath }) => {
-      try {
-        const image = await renderProduct(product, config, assets);
+  const needsBackgroundWorker = pending.some(({ product }) => (
+    resolveProductTemplate(product, config).template.productImage.backgroundRemoval?.enabled === true
+  ));
+  const backgroundWorker = needsBackgroundWorker ? await createLocalBackgroundWorker() : null;
+  let renderResults;
+  try {
+    renderResults = await runWorkerPool(
+      pending,
+      config.processing.concurrency,
+      async ({ product, entry, imagePath }) => {
         try {
-          await writeFile(imagePath, image, { flag: "wx" });
-        } catch (error) {
-          if (error.code !== "EEXIST") throw error;
-          const existingImage = await readFile(imagePath);
-          if (!existingImage.equals(image)) {
-            throw new Error("immutable image already exists with different bytes; increase templateVersion");
+          const image = await renderProduct(product, config, assets, undefined, { backgroundWorker });
+          try {
+            await writeFile(imagePath, image, { flag: "wx" });
+          } catch (error) {
+            if (error.code !== "EEXIST") throw error;
+            const existingImage = await readFile(imagePath);
+            if (!existingImage.equals(image)) {
+              throw new Error("immutable image already exists with different bytes; increase templateVersion");
+            }
           }
+          if (onImageRendered) await onImageRendered({ product, entry, image });
+          nextProducts[product.id] = entry;
+          renderedProgressCount += 1;
+          processedCount += 1;
+          reportProcessing();
+          return { status: "rendered", id: product.id };
+        } catch (error) {
+          delete nextProducts[product.id];
+          failedProgressCount += 1;
+          processedCount += 1;
+          reportProcessing();
+          return { status: "failed", id: product.id, reason: error.message };
         }
-        if (onImageRendered) await onImageRendered({ product, entry, image });
-        nextProducts[product.id] = entry;
-        renderedProgressCount += 1;
-        processedCount += 1;
-        reportProcessing();
-        return { status: "rendered", id: product.id };
-      } catch (error) {
-        delete nextProducts[product.id];
-        failedProgressCount += 1;
-        processedCount += 1;
-        reportProcessing();
-        return { status: "failed", id: product.id, reason: error.message };
-      }
-    },
-  );
+      },
+    );
+  } finally {
+    await backgroundWorker?.close();
+  }
 
   const state = { version: 1, clientId: config.clientId, products: nextProducts };
   await saveLocalState(statePath, state);

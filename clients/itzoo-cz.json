@@ -1,7 +1,7 @@
 {
   "clientId": "itzoo-cz",
   "name": "ITzoo.cz",
-  "templateVersion": 7,
+  "templateVersion": 9,
   "feed": {
     "url": "https://feedfiles.woolytech.com/itzoo-b76b.myshopify.com/HOB8anDDAc.tsv",
     "format": "csv",
@@ -31,8 +31,7 @@
         "field": "source.product_type",
         "operator": "categoryIn",
         "value": [
-          "Telefon",
-          "Telefón"
+          "Notebook"
         ]
       }
     ]
@@ -60,7 +59,12 @@
     "padding": 48,
     "productImage": {
       "fit": "contain",
-      "heightPercent": 62
+      "heightPercent": 62,
+      "backgroundRemoval": {
+        "enabled": true,
+        "provider": "birefnet",
+        "paddingPercent": 4
+      }
     },
     "logo": {
       "show": true,
@@ -89,7 +93,7 @@
     "title": {
       "show": true,
       "fontSize": 30,
-      "maxCharacters": 72,
+      "maxCharacters": 48,
       "textColor": "#111111"
     }
   },
@@ -117,7 +121,12 @@
         "padding": 48,
         "productImage": {
           "fit": "contain",
-          "heightPercent": 62
+          "heightPercent": 62,
+          "backgroundRemoval": {
+            "enabled": false,
+            "provider": "birefnet",
+            "paddingPercent": 5
+          }
         },
         "logo": {
           "show": true,

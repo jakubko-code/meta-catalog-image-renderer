@@ -37,3 +37,19 @@ test("content hash changes for every render input group", () => {
   assert.notEqual(contentHash(product, { ...config, brand: { ...config.brand, primaryColor: "#000000" } }), original);
   assert.notEqual(contentHash(product, { ...config, template: { ...config.template, padding: 60 } }), original);
 });
+
+test("content hash changes when background removal is enabled", () => {
+  const original = contentHash(product, config);
+  const withBackgroundRemoval = {
+    ...config,
+    template: {
+      ...config.template,
+      productImage: {
+        fit: "contain",
+        heightPercent: 62,
+        backgroundRemoval: { enabled: true, provider: "birefnet", paddingPercent: 5 },
+      },
+    },
+  };
+  assert.notEqual(contentHash(product, withBackgroundRemoval), original);
+});

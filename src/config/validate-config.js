@@ -209,7 +209,7 @@ function validateTemplate(template, checks, errors) {
   );
 
   if (checks.object(template.productImage, "template.productImage")) {
-    checks.knownKeys(template.productImage, "template.productImage", ["fit", "heightPercent"]);
+    checks.knownKeys(template.productImage, "template.productImage", ["fit", "heightPercent", "backgroundRemoval"]);
     checks.string(template.productImage.fit, "template.productImage.fit", { allowed: EDITOR_FIELD_OPTIONS["template.productImage.fit"].options });
     checks.integer(
       template.productImage.heightPercent,
@@ -217,6 +217,20 @@ function validateTemplate(template, checks, errors) {
       EDITOR_FIELD_OPTIONS["template.productImage.heightPercent"].minimum,
       EDITOR_FIELD_OPTIONS["template.productImage.heightPercent"].maximum,
     );
+    if (template.productImage.backgroundRemoval !== undefined
+      && checks.object(template.productImage.backgroundRemoval, "template.productImage.backgroundRemoval")) {
+      checks.knownKeys(template.productImage.backgroundRemoval, "template.productImage.backgroundRemoval", ["enabled", "provider", "paddingPercent"]);
+      checks.boolean(template.productImage.backgroundRemoval.enabled, "template.productImage.backgroundRemoval.enabled");
+      checks.string(template.productImage.backgroundRemoval.provider, "template.productImage.backgroundRemoval.provider", {
+        allowed: EDITOR_FIELD_OPTIONS["template.productImage.backgroundRemoval.provider"].options,
+      });
+      checks.integer(
+        template.productImage.backgroundRemoval.paddingPercent,
+        "template.productImage.backgroundRemoval.paddingPercent",
+        EDITOR_FIELD_OPTIONS["template.productImage.backgroundRemoval.paddingPercent"].minimum,
+        EDITOR_FIELD_OPTIONS["template.productImage.backgroundRemoval.paddingPercent"].maximum,
+      );
+    }
   }
 
   if (checks.object(template.logo, "template.logo")) {

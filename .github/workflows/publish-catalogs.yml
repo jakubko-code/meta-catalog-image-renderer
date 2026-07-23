@@ -27,7 +27,7 @@ jobs:
   publish:
     name: Render and publish catalogs
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 180
     env:
       R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
       R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
@@ -43,6 +43,11 @@ jobs:
         with:
           node-version: 22
 
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
       - name: Cache dependencies
         id: node-modules-cache
         uses: actions/cache@v5
@@ -53,6 +58,23 @@ jobs:
       - name: Install dependencies
         if: steps.node-modules-cache.outputs.cache-hit != 'true'
         run: npm ci
+
+      - name: Cache background-removal environment
+        id: rembg-environment-cache
+        uses: actions/cache@v5
+        with:
+          path: .venv-rembg
+          key: ${{ runner.os }}-${{ runner.arch }}-python-3.12-rembg-${{ hashFiles('scripts/setup-u2net.js') }}
+
+      - name: Install background-removal environment
+        if: steps.rembg-environment-cache.outputs.cache-hit != 'true'
+        run: npm run setup:u2net
+
+      - name: Cache BiRefNet model
+        uses: actions/cache@v5
+        with:
+          path: out/models/u2net
+          key: ${{ runner.os }}-${{ runner.arch }}-birefnet-general-lite-v1
 
       - name: Run tests
         run: npm test

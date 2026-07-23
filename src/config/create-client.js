@@ -113,7 +113,11 @@ export function buildClientConfig({ clientId, name, feed, availabilityFilter = t
       theme: { primaryColor },
       backgroundColor: color(brand.backgroundColor, "#F7F5EF"),
       padding: 48,
-      productImage: { fit: "contain", heightPercent: 62 },
+      productImage: {
+        fit: "contain",
+        heightPercent: 62,
+        backgroundRemoval: { enabled: false, provider: "birefnet", paddingPercent: 5 },
+      },
       logo: { show: Boolean(brand.logo), position: "topLeft", maxWidth: 220 },
       price: {
         show: true,

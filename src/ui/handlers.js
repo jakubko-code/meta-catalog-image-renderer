@@ -10,6 +10,11 @@ import { getCatalogFilterOptions, updateCatalogFilter } from "./filter-service.j
 import { saveClientAssets } from "../config/save-client-assets.js";
 import { validateClientConfig } from "../config/validate-config.js";
 import { selectRenderProducts } from "../feed/select-render-products.js";
+import { removeProductBackground } from "../background/gemini-background-removal.js";
+import {
+  removeProductBackgroundBiRefNet,
+  removeProductBackgroundU2Net,
+} from "../background/u2net-background-removal.js";
 
 const previewQueue = new PreviewQueue();
 
@@ -115,6 +120,56 @@ export async function previewHandler(request) {
       "content-type": "image/jpeg",
       "content-length": String(result.image.length),
       "x-product-id": result.product.id,
+    },
+    body: result.image,
+  };
+}
+
+export async function backgroundRemovalHandler(request) {
+  if (!request.body || typeof request.body !== "object" || Array.isArray(request.body)) {
+    const error = new Error("Expected a JSON object.");
+    error.statusCode = 400;
+    throw error;
+  }
+  if (typeof request.body.sku !== "string" || !request.body.sku) {
+    const error = new Error("sku is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+  if (request.body.force !== undefined && typeof request.body.force !== "boolean") {
+    const error = new Error("force must be a boolean.");
+    error.statusCode = 400;
+    throw error;
+  }
+  const provider = request.body.provider ?? "birefnet";
+  if (!["birefnet", "u2net", "gemini"].includes(provider)) {
+    const error = new Error("provider must be birefnet, u2net or gemini.");
+    error.statusCode = 400;
+    throw error;
+  }
+  const client = await getClient(request.params.id);
+  const feed = await loadFeed(client.config);
+  const product = feed.products.find((candidate) => candidate.id === request.body.sku);
+  if (!product) {
+    const error = new Error(`Product ${JSON.stringify(request.body.sku)} was not found among eligible products.`);
+    error.statusCode = 404;
+    throw error;
+  }
+  const remove = provider === "gemini"
+    ? removeProductBackground
+    : provider === "birefnet"
+      ? removeProductBackgroundBiRefNet
+      : removeProductBackgroundU2Net;
+  const result = await remove(product, client.config, { force: request.body.force === true });
+  return {
+    status: 200,
+    headers: {
+      "content-type": "image/png",
+      "content-length": String(result.image.length),
+      "x-background-cache": result.cached ? "hit" : "miss",
+      "x-background-provider": provider,
+      "x-background-model": result.model,
+      "x-product-id": product.id,
     },
     body: result.image,
   };

@@ -3,6 +3,8 @@ export const EDITOR_FIELD_OPTIONS = {
   "template.padding": { minimum: 0, maximum: 500, step: 1 },
   "template.productImage.fit": { options: ["contain", "cover"] },
   "template.productImage.heightPercent": { minimum: 1, maximum: 100, step: 1, suffix: "%" },
+  "template.productImage.backgroundRemoval.provider": { options: ["birefnet"] },
+  "template.productImage.backgroundRemoval.paddingPercent": { minimum: 0, maximum: 30, step: 1, suffix: "%" },
   "template.logo.position": { options: ["topLeft", "topRight", "bottomLeft", "bottomRight"] },
   "template.logo.maxWidth": { minimum: 1, maximum: 2000, step: 1, suffix: "px" },
   "template.price.position": { options: ["topLeft", "topRight", "bottomLeft", "bottomRight"] },
@@ -19,6 +21,13 @@ function labelFor(key) {
     primaryColor: "Hlavná farba",
     accentColor: "Akcentová farba",
     textColor: "Farba textu",
+    productImage: "Produktový obrázok",
+    fit: "Prispôsobenie obrázka",
+    heightPercent: "Výška produktovej plochy",
+    backgroundRemoval: "Odstránenie pozadia",
+    enabled: "Použiť produkt bez pozadia",
+    provider: "Lokálny model",
+    paddingPercent: "Okraj okolo výrezu",
   };
   if (labels[key]) return labels[key];
   return key

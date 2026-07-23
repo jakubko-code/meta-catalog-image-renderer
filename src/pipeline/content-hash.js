@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { resolveProductTemplate } from "../render/template-resolver.js";
+import { LOCAL_BACKGROUND_PIPELINE_VERSION } from "../background/u2net-background-removal.js";
 
 function canonicalize(value) {
   if (Array.isArray(value)) return value.map(canonicalize);
@@ -28,6 +29,9 @@ export function contentHash(product, config) {
     brand: config.brand,
     output: config.output,
     templateVersion: config.templateVersion,
+    backgroundRemovalPipelineVersion: selected.template.productImage?.backgroundRemoval?.enabled
+      ? LOCAL_BACKGROUND_PIPELINE_VERSION
+      : null,
   });
   return createHash("sha256").update(JSON.stringify(content)).digest("hex").slice(0, 16);
 }

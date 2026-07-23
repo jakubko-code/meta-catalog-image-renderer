@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import {
   analyzeClientFeedHandler,
+  backgroundRemovalHandler,
   catalogFiltersHandler,
   clientHandler,
   createClientHandler,
@@ -28,6 +29,7 @@ const runsPath = /^\/api\/client\/([a-z0-9][a-z0-9-]*)\/runs$/;
 const productsPath = /^\/api\/client\/([a-z0-9][a-z0-9-]*)\/products$/;
 const filtersPath = /^\/api\/client\/([a-z0-9][a-z0-9-]*)\/filters$/;
 const previewPath = /^\/api\/client\/([a-z0-9][a-z0-9-]*)\/preview$/;
+const backgroundRemovalPath = /^\/api\/client\/([a-z0-9][a-z0-9-]*)\/background-removal$/;
 const templatePath = /^\/api\/client\/([a-z0-9][a-z0-9-]*)\/template$/;
 const templateEstimatePath = /^\/api\/client\/([a-z0-9][a-z0-9-]*)\/template\/estimate$/;
 const assetsPath = /^\/api\/client\/([a-z0-9][a-z0-9-]*)\/assets$/;
@@ -134,6 +136,16 @@ async function route(request, response) {
     send(response, await previewHandler({
       url,
       params: { id: previewMatch[1] },
+      body: await readJson(request),
+    }));
+    return;
+  }
+
+  const backgroundRemovalMatch = url.pathname.match(backgroundRemovalPath);
+  if (request.method === "POST" && backgroundRemovalMatch) {
+    send(response, await backgroundRemovalHandler({
+      url,
+      params: { id: backgroundRemovalMatch[1] },
       body: await readJson(request),
     }));
     return;

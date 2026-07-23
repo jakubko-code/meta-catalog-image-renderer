@@ -15,6 +15,7 @@
     "publish": "node --env-file-if-exists=.env src/cli.js publish",
     "publish:all": "node --env-file-if-exists=.env src/automation/run-all-clients.js",
     "ui": "node --env-file-if-exists=.env src/ui/server.js",
+    "setup:u2net": "node scripts/setup-u2net.js",
     "test": "node --test"
   },
   "dependencies": {

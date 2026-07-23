@@ -1,6 +1,8 @@
 node_modules/
+.venv-rembg/
 .env
 out/
 preview.jpg
 *.log
 .DS_Store
+__pycache__/

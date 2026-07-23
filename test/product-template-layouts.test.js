@@ -65,3 +65,20 @@ test("template theme overrides the shared client brand color", () => {
   assert.equal(tree.props.children[0].props.style.backgroundColor, "#00ff1e");
   assert.match(tree.props.children[1].props.style.border, /#00ff1e/);
 });
+
+test("background-removed product is placed directly on the template background", () => {
+  const tree = createProductTemplate(product, {
+    ...config,
+    template: {
+      ...template,
+      productImage: {
+        ...template.productImage,
+        backgroundRemoval: { enabled: true, provider: "birefnet", paddingPercent: 5 },
+      },
+    },
+  }, { logo: { dataUri: pixel, aspectRatio: 1 } }, pixel);
+  const productContainer = tree.props.children[1];
+  assert.equal(productContainer.props.style.backgroundColor, "transparent");
+  assert.equal(productContainer.props.style.border, "0px solid transparent");
+  assert.equal(productContainer.props.children.props.width, 984);
+});

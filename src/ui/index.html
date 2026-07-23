@@ -88,6 +88,7 @@
     .toggle button { border:0; background:none; padding:4px 11px; cursor:pointer; color:var(--faint); font:10px var(--mono); letter-spacing:.1em; text-transform:uppercase }
     .toggle button[aria-pressed=true] { background:var(--panel-3); color:var(--fg) }
     .preview-stage { position:relative; aspect-ratio:1; overflow:hidden; background:#fff; border-radius:5px }
+    .preview-stage.cutout { background-color:#fff; background-image:linear-gradient(45deg,#e5e7eb 25%,transparent 25%),linear-gradient(-45deg,#e5e7eb 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#e5e7eb 75%),linear-gradient(-45deg,transparent 75%,#e5e7eb 75%); background-size:24px 24px; background-position:0 0,0 12px,12px -12px,-12px 0 }
     .preview-stage img { display:block; width:100%; height:100%; object-fit:contain }
     .preview-loading { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(19,20,23,.72); color:var(--fg); font-size:12px }
     .preview-actions { display:flex; gap:9px; margin-top:12px }
@@ -346,6 +347,7 @@
                   <div class="toggle">
                     <button id="preview-before" aria-pressed="false">Pred</button>
                     <button id="preview-after" aria-pressed="true">Po</button>
+                    <button id="preview-cutout" aria-pressed="false">Výrez</button>
                   </div>
                 </div>
                 <div class="preview-stage">
@@ -361,6 +363,16 @@
                 <button class="btn" id="discard-template" disabled>Zahodiť zmeny</button>
                 <button class="btn primary" id="save-template" disabled>Uložené</button>
               </div>
+              <div class="field" style="margin-top:9px">
+                <label for="background-provider">Odstránenie pozadia</label>
+                <select id="background-provider">
+                  <option value="birefnet">Lokálny BiRefNet — odporúčané</option>
+                  <option value="u2net">Lokálny U²-Net — základný</option>
+                  <option value="gemini">Gemini Nano Banana 2 — experimentálne</option>
+                </select>
+              </div>
+              <button class="btn" id="remove-background" type="button" style="width:100%;margin-top:9px">Vytvoriť lokálny výrez</button>
+              <div class="save-note" id="background-removal-note">BiRefNet spracuje zvolené SKU iba na tomto počítači, automaticky ho oreže a zväčší.</div>
               <div class="save-note" id="save-note"></div>
               <div class="preview-error" id="preview-error"></div>
             </div>
@@ -515,6 +527,8 @@
       var previewTimer = null;
       var latestPreviewRequest = 0;
       var renderedPreviewUrl = null;
+      var backgroundCutoutUrls = { birefnet:null, u2net:null, gemini:null };
+      var backgroundRemovalLoading = false;
       var renderPollTimer = null;
       var announcedJobId = null;
       var gridCategory = 'all';
@@ -1362,10 +1376,15 @@
       function updatePreviewImage() {
         if (!selectedProduct) return;
         el('preview-sku').textContent = selectedProduct.id;
+        el('preview-image').parentElement.classList.toggle('cutout', previewMode === 'cutout');
         if (previewMode === 'before') {
           el('preview-image').src = selectedProduct.imageUrl;
           el('preview-image').style.objectFit = 'contain';
           setPreviewLoading(false);
+        } else if (previewMode === 'cutout') {
+          el('preview-image').src = backgroundCutoutUrls[el('background-provider').value] || selectedProduct.imageUrl;
+          el('preview-image').style.objectFit = 'contain';
+          if (!backgroundRemovalLoading) setPreviewLoading(false);
         } else if (renderedPreviewUrl) {
           el('preview-image').src = renderedPreviewUrl;
           el('preview-image').style.objectFit = 'contain';
@@ -1408,8 +1427,68 @@
         previewMode = mode;
         el('preview-before').setAttribute('aria-pressed', String(mode === 'before'));
         el('preview-after').setAttribute('aria-pressed', String(mode === 'after'));
+        el('preview-cutout').setAttribute('aria-pressed', String(mode === 'cutout'));
         updatePreviewImage();
         if (mode === 'after' && !renderedPreviewUrl) schedulePreview(true);
+      }
+
+      function updateBackgroundRemovalControls() {
+        if (backgroundRemovalLoading) return;
+        var provider = el('background-provider').value;
+        var providerName = provider === 'gemini' ? 'Gemini' : provider === 'birefnet' ? 'BiRefNet' : 'U²-Net';
+        var hasCutout = Boolean(backgroundCutoutUrls[provider]);
+        if (hasCutout) {
+          el('remove-background').textContent = 'Vytvoriť výrez znova';
+          el('background-removal-note').textContent = provider === 'gemini'
+            ? 'Gemini výrez je pripravený. Nové vynútenie môže byť účtované cez API.'
+            : 'Lokálny ' + providerName + ' výrez je pripravený, zväčšený a zostáva v cache na tomto počítači.';
+        } else {
+          el('remove-background').textContent = provider === 'gemini' ? 'Vytvoriť výrez cez Gemini' : 'Vytvoriť lokálny výrez';
+          el('background-removal-note').textContent = provider === 'gemini'
+            ? 'Gemini spracuje iba zvolené SKU cez API a výsledok uloží do oddelenej cache.'
+            : providerName + ' spracuje zvolené SKU iba na tomto počítači, automaticky ho oreže a zväčší.';
+        }
+      }
+
+      async function removeSelectedProductBackground(force) {
+        if (!selectedProduct || backgroundRemovalLoading) return;
+        var provider = el('background-provider').value;
+        var isGemini = provider === 'gemini';
+        var providerName = isGemini ? 'Gemini' : provider === 'birefnet' ? 'BiRefNet' : 'U²-Net';
+        backgroundRemovalLoading = true;
+        el('remove-background').disabled = true;
+        el('remove-background').textContent = providerName + ' odstraňuje pozadie…';
+        el('background-removal-note').innerHTML = '<span class="spinner"></span>' + (isGemini ? 'Gemini spracovanie môže trvať niekoľko minút.' : 'Pri prvom použití sa stiahne model; ďalšie výrezy už prebehnú lokálne.') ;
+        el('preview-error').textContent = '';
+        setPreviewMode('cutout');
+        setPreviewLoading(true);
+        try {
+          var response = await fetch('/api/client/' + encodeURIComponent(selectedId) + '/background-removal', {
+            method:'POST',
+            headers:{ 'content-type':'application/json', accept:'image/png' },
+            body:JSON.stringify({ sku:selectedProduct.id, provider:provider, force:force === true })
+          });
+          if (!response.ok) {
+            var errorBody = await response.json();
+            throw new Error(errorBody.error || 'Pozadie sa nepodarilo odstrániť.');
+          }
+          var cacheStatus = response.headers.get('x-background-cache');
+          var model = response.headers.get('x-background-model') || providerName;
+          var blob = await response.blob();
+          if (backgroundCutoutUrls[provider]) URL.revokeObjectURL(backgroundCutoutUrls[provider]);
+          backgroundCutoutUrls[provider] = URL.createObjectURL(blob);
+          el('background-removal-note').textContent = (cacheStatus === 'hit' ? 'Načítané z cache' : 'Nový výrez vytvorený') + ' · ' + model + (isGemini ? '. Opakované vynútenie vytvorí nový platený výstup.' : '. Obrázok neopustil tento počítač.');
+          el('remove-background').textContent = 'Vytvoriť výrez znova';
+          updatePreviewImage();
+        } catch (error) {
+          el('preview-error').textContent = error.message;
+          el('background-removal-note').textContent = 'Výrez nebol vytvorený.';
+          el('remove-background').textContent = isGemini ? 'Vytvoriť výrez cez Gemini' : 'Vytvoriť lokálny výrez';
+        } finally {
+          backgroundRemovalLoading = false;
+          el('remove-background').disabled = false;
+          setPreviewLoading(false);
+        }
       }
 
       async function setupEditor(client) {
@@ -1417,6 +1496,11 @@
         clearTimeout(previewTimer);
         if (renderedPreviewUrl) URL.revokeObjectURL(renderedPreviewUrl);
         renderedPreviewUrl = null;
+        Object.keys(backgroundCutoutUrls).forEach(function (provider) {
+          if (backgroundCutoutUrls[provider]) URL.revokeObjectURL(backgroundCutoutUrls[provider]);
+          backgroundCutoutUrls[provider] = null;
+        });
+        updateBackgroundRemovalControls();
         currentClient = client;
         activeTemplateId = 'default';
         draft = {
@@ -1595,11 +1679,21 @@
       el('sample-product').addEventListener('change', function () {
         selectedProduct = products.find(function (product) { return product.id === el('sample-product').value; });
         renderedPreviewUrl = renderedPreviewUrl && (URL.revokeObjectURL(renderedPreviewUrl), null);
+        Object.keys(backgroundCutoutUrls).forEach(function (provider) {
+          if (backgroundCutoutUrls[provider]) URL.revokeObjectURL(backgroundCutoutUrls[provider]);
+          backgroundCutoutUrls[provider] = null;
+        });
+        updateBackgroundRemovalControls();
         updatePreviewImage();
         schedulePreview(true);
       });
       el('preview-before').addEventListener('click', function () { setPreviewMode('before'); });
       el('preview-after').addEventListener('click', function () { setPreviewMode('after'); });
+      el('preview-cutout').addEventListener('click', function () { setPreviewMode('cutout'); });
+      el('background-provider').addEventListener('change', function () { updateBackgroundRemovalControls(); updatePreviewImage(); });
+      el('remove-background').addEventListener('click', function () {
+        removeSelectedProductBackground(Boolean(backgroundCutoutUrls[el('background-provider').value]));
+      });
       el('discard-template').addEventListener('click', function () {
         if (!hasUnsavedTemplateChanges()) return;
         latestPreviewRequest += 1;
