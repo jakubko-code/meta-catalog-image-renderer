@@ -44,6 +44,7 @@ jobs:
           node-version: 22
 
       - name: Set up Python
+        id: setup-python
         uses: actions/setup-python@v6
         with:
           python-version: "3.12"
@@ -64,7 +65,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: .venv-rembg
-          key: ${{ runner.os }}-${{ runner.arch }}-python-3.12-rembg-${{ hashFiles('scripts/setup-u2net.js') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-python-${{ steps.setup-python.outputs.python-version }}-rembg-${{ hashFiles('scripts/setup-u2net.js') }}
 
       - name: Install background-removal environment
         if: steps.rembg-environment-cache.outputs.cache-hit != 'true'
